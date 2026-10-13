@@ -1,0 +1,3134 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- iPhone / PWA -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Terminal Takip">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <style>
+      /* iPhone çentik / ana ekran çubuğu için güvenli alan */
+      body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); padding-bottom: env(safe-area-inset-bottom); }
+      .fixed.inset-0 { padding-top: max(0.75rem, env(safe-area-inset-top)); padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+      #splash-screen { padding: 0; }
+      input, textarea, select { font-size: max(16px, 1em); } /* iOS'ta odaklanınca otomatik yakınlaştırmayı önler */
+    </style>
+    <title id="page-title">Terminal Takip - Saha & Kabul Denetim Sistemi</title>
+    <!-- Local Offline CSS & JS -->
+    <link rel="stylesheet" href="css/all.min.css">
+    <script src="js/tailwind.js"></script>
+    <script src="js/mammoth.browser.min.js"></script>
+    <script src="js/html2pdf.bundle.min.js"></script>
+    <script src="js/jspdf.umd.min.js"></script>
+    <script src="js/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background-color: #f8fafc; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .note-done { background-color: #ecfdf5; border-color: #10b981; }
+        .note-done-text { color: #059669; text-decoration: line-through; opacity: 0.85; }
+        .notes-container { max-height: 50vh; overflow-y: auto; padding-right: 4px; }
+
+        /* ======================================================== */
+        /* PDF VE SAYFA BÖLÜNME ENGELLEME KURALLARI (Genel & Ekran) */
+        /* ======================================================== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            page-break-inside: auto;
+            break-inside: auto;
+        }
+        thead {
+            display: table-header-group !important;
+        }
+        tbody {
+            display: table-row-group !important;
+        }
+        tfoot {
+            display: table-footer-group !important;
+        }
+        tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+        td, th {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+        .report-table-page, .photo-card-item, .photo-wrapper, .avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+        .html2pdf__page-break, .photo-break-marker {
+            page-break-before: always !important;
+            break-before: page !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Print (PDF) Styles - Yatay (Landscape A4) Düzen ve Tam Sığdırma */
+        @media print {
+            @page { size: auto; margin: 0.5cm; }
+            @page landscape { size: A4 landscape; margin: 0.5cm; }
+            @page portrait { size: A4 portrait; margin: 0.5cm; }
+            body > *:not(#print-container) { display: none !important; }
+            #print-container { display: block !important; width: 100% !important; background: white !important; margin: 0 !important; padding: 0 !important; }
+            .tt-print-landscape { page: landscape; page-break-after: always; break-after: page; }
+            .tt-print-portrait { page: portrait; page-break-after: always; break-after: page; }
+            
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px; page-break-inside: auto; }
+            th, td { border: 1px solid #333 !important; padding: 5px 6px; text-align: left; page-break-inside: avoid !important; break-inside: avoid !important; }
+            th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
+            
+            tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+            thead { display: table-header-group !important; }
+            tbody { display: table-row-group !important; }
+            tfoot { display: table-footer-group !important; }
+            
+            .report-table-page, .photo-card-item, .avoid-break {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-red-500 selection:text-white bg-slate-100 min-h-screen flex flex-col">
+
+    <!-- ======================================================== -->
+    <!-- TERMINAL TAKIP - ANİMASYONLU AÇILIŞ / SPLASH EKRANI       -->
+    <!-- ======================================================== -->
+    <div id="splash-screen" class="fixed inset-0 bg-[#121619] z-[9999] flex flex-col justify-center items-center transition-all duration-700 select-none overflow-hidden" onclick="dismissSplashScreen()">
+        <style>
+            .splash-pixel {
+                rx: 1.5px;
+                transform-box: fill-box;
+                transform-origin: center;
+                opacity: 0;
+                animation-fill-mode: forwards;
+            }
+            .dark-burgundy { fill: #720000; }
+            .crimson-red { fill: #c81010; }
+            .bright-red { fill: #ff1e1e; }
+            .neon-red { fill: #ff5100; filter: drop-shadow(0 0 6px #ff5100); }
+
+            .pop-in {
+                animation: splashPopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            }
+            @keyframes splashPopIn {
+                0% { transform: scale(0); opacity: 0; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+
+            .d-1 { animation-delay: 0.08s; }
+            .d-2 { animation-delay: 0.16s; }
+            .d-3 { animation-delay: 0.24s; }
+            .d-4 { animation-delay: 0.32s; }
+            .d-5 { animation-delay: 0.40s; }
+
+            .fly-in {
+                animation: splashFlyIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            }
+            @keyframes splashFlyIn {
+                0% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+                50% { opacity: 1; }
+                100% { transform: translate(0, 0) scale(1); opacity: 1; }
+            }
+
+            .f-1 { animation-delay: 0.35s; }
+            .f-2 { animation-delay: 0.45s; }
+            .f-3 { animation-delay: 0.55s; }
+            .f-4 { animation-delay: 0.65s; }
+            .f-5 { animation-delay: 0.75s; }
+
+            .sync-pulse {
+                animation: splashPulse 1.5s infinite alternate ease-in-out;
+                animation-delay: 0.8s;
+                transform-origin: center;
+            }
+            .sync-float {
+                animation: splashFloat 2s infinite alternate ease-in-out;
+                animation-delay: 0.8s;
+                transform-origin: center;
+            }
+            @keyframes splashPulse {
+                0% { opacity: 0.6; transform: scale(0.9); }
+                100% { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 8px #ff2200); }
+            }
+            @keyframes splashFloat {
+                0% { opacity: 0.7; transform: translate(0px, 0px); }
+                100% { opacity: 1; transform: translate(-2px, 2px); }
+            }
+
+            @keyframes splashTitleFade {
+                0% { opacity: 0; transform: translateY(12px); }
+                100% { opacity: 1; transform: translateY(0); }
+            }
+            .splash-title-anim {
+                animation: splashTitleFade 0.7s ease-out 0.6s forwards;
+                opacity: 0;
+            }
+            @keyframes splashSubFade {
+                0% { opacity: 0; }
+                100% { opacity: 0.75; }
+            }
+            .splash-sub-anim {
+                animation: splashSubFade 0.6s ease-out 0.9s forwards;
+                opacity: 0;
+            }
+            @keyframes splashBarAnim {
+                0% { width: 0%; }
+                100% { width: 100%; }
+            }
+            .splash-bar-fill {
+                animation: splashBarAnim 1.4s ease-in-out 0.3s forwards;
+            }
+        </style>
+
+        <div class="relative flex flex-col items-center">
+            <!-- Ambient Glow -->
+            <div class="absolute -top-10 w-48 h-48 bg-red-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Animated T SVG Logo -->
+            <svg viewBox="0 0 100 100" width="150" height="150" class="overflow-visible drop-shadow-2xl">
+                <!-- SOL KOL -->
+                <rect x="15" y="20" width="12" height="12" class="splash-pixel dark-burgundy pop-in d-1" />
+                <rect x="28" y="20" width="12" height="12" class="splash-pixel dark-burgundy pop-in d-2" />
+                <rect x="15" y="33" width="12" height="12" class="splash-pixel dark-burgundy pop-in d-2" />
+                <rect x="28" y="33" width="12" height="12" class="splash-pixel dark-burgundy pop-in d-3" />
+                
+                <!-- ANA GÖVDE -->
+                <rect x="41" y="20" width="12" height="12" class="splash-pixel dark-burgundy pop-in d-1" />
+                <rect x="41" y="33" width="12" height="12" class="splash-pixel crimson-red pop-in d-2" />
+                <rect x="41" y="46" width="12" height="12" class="splash-pixel crimson-red pop-in d-3" />
+                <rect x="41" y="59" width="12" height="12" class="splash-pixel bright-red pop-in d-4" />
+                <rect x="41" y="72" width="12" height="12" class="splash-pixel bright-red pop-in d-5" />
+
+                <!-- SAĞ KOL -->
+                <rect x="54" y="20" width="12" height="12" class="splash-pixel crimson-red pop-in d-3" />
+                <rect x="67" y="20" width="9" height="9" class="splash-pixel bright-red pop-in d-4" />
+                <rect x="54" y="33" width="8" height="8" class="splash-pixel bright-red pop-in d-5" />
+                
+                <!-- ALT GÖVDE -->
+                <rect x="28" y="72" width="8" height="8" class="splash-pixel bright-red pop-in d-5" />
+                <rect x="54" y="72" width="9" height="9" class="splash-pixel bright-red pop-in d-4" />
+
+                <!-- SENKRONİZASYON PİKSELLERİ (Uçan ve titreşen canlı veriler) -->
+                <rect x="78" y="22" width="6" height="6" class="splash-pixel neon-red fly-in f-1 sync-pulse" style="--dx: 60px; --dy: -30px;" />
+                <rect x="86" y="16" width="4" height="4" class="splash-pixel neon-red fly-in f-2 sync-float" style="--dx: 70px; --dy: -10px;" />
+                <rect x="65" y="34" width="5" height="5" class="splash-pixel neon-red fly-in f-3 sync-pulse" style="--dx: 50px; --dy: 30px;" />
+                <rect x="62" y="48" width="7" height="7" class="splash-pixel bright-red fly-in f-4 sync-float" style="--dx: 40px; --dy: 40px;" />
+                <rect x="72" y="52" width="4" height="4" class="splash-pixel neon-red fly-in f-5 sync-pulse" style="--dx: 50px; --dy: 50px;" />
+                <rect x="33" y="83" width="6" height="6" class="splash-pixel neon-red fly-in f-2 sync-pulse" style="--dx: -30px; --dy: 40px;" />
+                <rect x="43" y="86" width="8" height="8" class="splash-pixel neon-red fly-in f-3 sync-float" style="--dx: 0px; --dy: 50px;" />
+                <rect x="55" y="84" width="5" height="5" class="splash-pixel neon-red fly-in f-4 sync-pulse" style="--dx: 30px; --dy: 40px;" />
+                <rect x="64" y="80" width="3" height="3" class="splash-pixel neon-red fly-in f-5 sync-float" style="--dx: 40px; --dy: 30px;" />
+            </svg>
+
+            <!-- App Title -->
+            <div class="text-center mt-5 splash-title-anim">
+                <h1 class="text-2xl sm:text-3xl font-black text-white tracking-wider flex items-center justify-center gap-2">
+                    <span class="bg-gradient-to-r from-red-500 via-rose-500 to-red-400 bg-clip-text text-transparent">TERMINAL</span>
+                    <span class="text-slate-100 font-bold">TAKİP</span>
+                </h1>
+                <p class="text-xs text-slate-400 font-medium tracking-wide mt-1.5 splash-sub-anim">
+                    Saha & Kabul Denetim Sistemi
+                </p>
+            </div>
+
+            <!-- Subtle Progress Bar -->
+            <div class="w-36 h-1 bg-slate-800 rounded-full overflow-hidden mt-6">
+                <div class="h-full bg-gradient-to-r from-red-600 to-rose-400 rounded-full splash-bar-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIXED / STICKY TOP HEADER -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-[90rem] mx-auto p-3 sm:p-4 lg:px-8">
+            <div class="flex flex-col xl:flex-row justify-between gap-3">
+                
+                <!-- Logo & Active Site & Site Switcher -->
+                <div class="flex items-center gap-3">
+                    <img id="app-logo-img" src="img/logo.png" class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-contain bg-white shadow-sm border border-slate-200 flex-shrink-0 cursor-pointer p-0.5" onclick="openSitesListModal()" title="Şantiyelerimi Yönet" alt="Terminal Takip Logo">
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-gradient-to-r from-red-600 to-rose-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Terminal Takip</span>
+                            <span class="text-xs text-slate-400 font-medium hidden sm:inline"><i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i>Çevrimdışı & PDF Hazır</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <h1 id="app-project-title" class="text-sm sm:text-lg font-bold text-slate-800 truncate cursor-pointer hover:text-blue-600 transition-colors" onclick="openSitesListModal()" title="Şantiyeyi Değiştirmek veya Yönetmek İçin Tıklayın">
+                                Bornova Rezidans & Yaşam Merkezi
+                            </h1>
+                            <!-- Şantiye Seçici / Değiştirici Buton -->
+                            <button onclick="openSitesListModal()" class="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold border border-blue-200 transition-all flex items-center gap-1 flex-shrink-0" title="Kayıtlı Şantiyeler Arasında Geçiş Yap">
+                                <i class="fa-solid fa-layer-group text-[10px]"></i> <span id="site-count-badge">1 Şantiye</span> <i class="fa-solid fa-chevron-down text-[9px] text-blue-500"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Project Meta Info Bar -->
+                        <div id="app-project-meta" class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 truncate mt-0.5">
+                            <span id="meta-code" class="font-mono text-[11px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">PROJ-2026</span>
+                            <span id="meta-location"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>İzmir, Karşıyaka</span>
+                            <span id="meta-contractor" class="hidden md:inline"><i class="fa-solid fa-hard-hat text-slate-400 mr-1"></i>Apex Yapı A.Ş.</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Buttons & Actions Container -->
+                <div class="flex flex-col gap-2 xl:w-2/3">
+                    
+                    <!-- Row 1: Primary Action Buttons (Yedekle ve Yükle butonları kaldırıldı) -->
+                    <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-start xl:justify-end gap-2">
+                        <!-- Yeni Şantiye Ekle Butonu -->
+                        <button onclick="openSiteModal(true)" class="bg-[#0f172a] hover:bg-slate-800 active:scale-95 text-cyan-400 border border-cyan-500/40 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm text-xs sm:text-sm" title="Tamamen Yeni Bir Şantiye Tanımla">
+                            <i class="fa-solid fa-building-circle-plus text-cyan-400"></i> <span>Yeni Şantiye</span>
+                        </button>
+
+                        <button onclick="saveData()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3.5 py-2 rounded-xl font-semibold transition-all flex items-center justify-center gap-1.5 shadow-sm text-xs sm:text-sm">
+                            <i class="fa-solid fa-floppy-disk"></i> <span>Kaydet</span>
+                        </button>
+                        
+                        <button onclick="resetData()" class="bg-red-50 hover:bg-red-100 active:scale-95 text-red-600 border border-red-200 px-3.5 py-2 rounded-xl font-semibold transition-all flex items-center justify-center gap-1.5 text-xs sm:text-sm" title="Bu şantiyedeki kayıtları sıfırlar">
+                            <i class="fa-solid fa-rotate-right"></i> <span>Sıfırla</span>
+                        </button>
+                        
+                        <button onclick="openPrintModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3.5 py-2 rounded-xl font-semibold transition-all flex items-center justify-center gap-1.5 shadow-sm text-xs sm:text-sm">
+                            <i class="fa-solid fa-file-pdf"></i> <span>PDF / Yazdır</span>
+                        </button>
+
+                        <button onclick="showExecutiveSummary()" class="bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-3.5 py-2 rounded-xl font-semibold transition-all flex items-center justify-center gap-1.5 shadow-sm text-xs sm:text-sm">
+                            <i class="fa-solid fa-chart-pie"></i> <span>Rapor Al</span>
+                        </button>
+                    </div>
+
+                    <!-- Row 2: Date Selector & WhatsApp Veri Al -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                        <!-- Hızlı Daire Arama Kutusu -->
+                        <div class="relative flex-1 min-w-[170px] max-w-xs">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="quick-flat-search-input" oninput="handleQuickFlatSearch(this.value)" placeholder="Hızlı Daire Ara (Örn: 14, Daire 02)..." 
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1 text-xs text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white transition-all">
+                            <div id="quick-search-results" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar p-1.5 space-y-1"></div>
+                        </div>
+
+                        <!-- Date Picker -->
+                        <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-xs">
+                            <i class="fa-regular fa-calendar text-slate-400"></i>
+                            <span class="font-medium text-slate-600 hidden sm:inline">Tarih:</span>
+                            <input type="date" id="inspection-date" class="bg-transparent border-none outline-none font-semibold text-slate-800 cursor-pointer text-xs">
+                        </div>
+
+                        <!-- Veri Al Butonu (WhatsApp / Word Entegrasyonu) -->
+                        <div>
+                            <button onclick="openDataImportModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3.5 py-1 rounded-xl font-semibold transition-all flex items-center gap-1.5 shadow-sm text-xs cursor-pointer" title="WhatsApp veya Word'den veri aktar">
+                                <i class="fa-brands fa-whatsapp text-sm text-emerald-200"></i> <span>Veri Al</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN BODY: KOMPAKT VE KAYDIRMA GEREKTİRMEYEN PANEL -->
+    <main class="flex-1 max-w-[90rem] w-full mx-auto p-3 sm:p-5 lg:p-8 space-y-4 pb-12">
+        
+        <!-- Global Progress Bar -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+            <div class="flex justify-between items-end mb-2">
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Genel İlerleme Durumu</span>
+                    <span class="text-sm sm:text-base font-semibold text-slate-700" id="current-site-header-name">Geçici Kabul Tamamlanma Oranı</span>
+                </div>
+                <span id="global-progress-text" class="text-2xl sm:text-3xl font-black text-emerald-600">%0</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden mb-3 border border-slate-100">
+                <div id="global-progress-bar" class="bg-emerald-500 h-3.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-xs sm:text-sm text-slate-500 font-medium">
+                <span id="global-stats-text"><i class="fa-solid fa-check-circle text-emerald-500 mr-1"></i>0 / 0 Açıklama Çözüldü</span>
+                <span id="completed-flats-text" class="text-amber-600 font-semibold"><i class="fa-solid fa-clock mr-1"></i>Toplam 0 Açık Not</span>
+            </div>
+        </div>
+
+        <!-- Kat / Alan Seçim Paneli (Kartlara Dokununca Açılır Pencere Gelir) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                <div>
+                    <h2 class="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-blue-600"></i>
+                        <span>Kat ve Alan Seçimi</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Daireleri ve mahalli açılır pencerede görmek için bir kata dokunun:</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                    <span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200" id="total-floors-summary">Toplam 0 Kat</span>
+                    <span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-200" id="total-flats-summary">Toplam 0 Daire</span>
+                </div>
+            </div>
+
+            <!-- Floor Grid (Kompakt Dokunmatik Kartlar) -->
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-2.5" id="floor-grid">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- 4.A KAT MAHALLERİ AÇILIR PENCERESİ (MODAL)                -->
+    <!-- (Kata tıklandığında ekrana gelir)                        -->
+    <!-- ======================================================== -->
+    <div id="floor-flats-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+            <!-- Header -->
+            <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-door-open"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-800" id="modal-floor-title">1. Kat Mahalleri</h3>
+                        <p class="text-xs text-slate-500" id="modal-floor-subtitle">İncelemek veya not eklemek istediğiniz daireyi seçin</p>
+                    </div>
+                </div>
+                <button onclick="closeFloorFlatsModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Flats Grid Container -->
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
+                <div id="modal-flat-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-3 sm:p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center text-xs">
+                <span class="text-slate-500" id="modal-floor-status-summary">0 Daire</span>
+                <button onclick="closeFloorFlatsModal()" class="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 font-semibold text-slate-700 transition-colors">
+                    Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 4.B DAİRE AÇIKLAMA VE NOTLAR AÇILIR KARTI (MODAL)        -->
+    <!-- (Daireye tıklandığında ekrana açılır kart olarak gelir)  -->
+    <!-- ======================================================== -->
+    <div id="flat-notes-modal" class="fixed inset-0 bg-slate-900/60 hidden z-[60] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[94vh] flex flex-col overflow-hidden border border-slate-200">
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <button onclick="backToFlatsModal()" class="w-9 h-9 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center text-sm transition-colors" title="Kat Mahallerine Dön">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400" id="flat-modal-subtitle">1. Kat / DAİRE 01</div>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-800" id="flat-modal-title">DAİRE 01 Açıklamalar</h2>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2.5">
+                    <!-- WhatsApp Share Button -->
+                    <button onclick="shareViaWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-3 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 shadow-sm transition-all" title="Bu dairenin eksiklerini WhatsApp'tan paylaş">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> <span>WhatsApp</span>
+                    </button>
+
+                    <!-- Acceptance Toggle -->
+                    <label id="approval-label" class="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                        <span id="approval-text" class="text-xs font-bold text-slate-600">Kabul</span>
+                        <div class="relative">
+                            <input type="checkbox" id="approval-checkbox" class="peer sr-only" onchange="toggleApproval()">
+                            <div class="block w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-emerald-500 transition-colors"></div>
+                            <div class="dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
+                        </div>
+                    </label>
+
+                    <button onclick="closeFlatNotesModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content (Add Note + Notes List) -->
+            <div class="p-4 sm:p-5 overflow-y-auto flex-1 custom-scrollbar space-y-4 bg-slate-50/40">
+                <!-- Add Note Input Bar -->
+                <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 relative flex items-center">
+                            <input type="text" id="new-note-input" placeholder="Bu daire için eksik veya açıklama girin..." 
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-3.5 pr-11 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-xs sm:text-sm"
+                                onkeypress="if(event.key === 'Enter') addNote()">
+                            
+                            <!-- Attached Photo Badge/Button inside input -->
+                            <!-- Kamera ve Galeri Butonları Yan Yana -->
+                            <input type="file" id="note-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSelect(event)">
+                            <input type="file" id="note-gallery-input" accept="image/*" class="hidden" onchange="handlePhotoSelect(event)">
+                            <div class="absolute right-2 flex items-center gap-1 bg-slate-100/90 rounded-lg p-0.5 border border-slate-200">
+                                <label for="note-camera-input" id="camera-upload-label" class="text-slate-500 hover:text-blue-600 active:scale-90 cursor-pointer p-1.5 rounded-md transition-all" title="Kamera ile Canlı Çek">
+                                    <i class="fa-solid fa-camera text-xs sm:text-sm"></i>
+                                </label>
+                                <label for="note-gallery-input" id="gallery-upload-label" class="text-slate-500 hover:text-emerald-600 active:scale-90 cursor-pointer p-1.5 rounded-md transition-all" title="Galeriden Seç">
+                                    <i class="fa-solid fa-images text-xs sm:text-sm"></i>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button onclick="addNote()" class="bg-slate-800 hover:bg-slate-900 active:scale-95 text-white px-5 py-2.5 rounded-xl font-semibold transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm flex-shrink-0">
+                            <i class="fa-solid fa-plus"></i> <span>Ekle</span>
+                        </button>
+                    </div>
+
+                    <!-- Selected Photo Preview (Before adding note) -->
+                    <div id="temp-photo-preview" class="hidden flex items-center gap-3 bg-blue-50/50 p-2 rounded-xl border border-blue-100 text-xs">
+                        <img id="temp-photo-img" class="w-10 h-10 rounded-lg object-cover border border-blue-200" alt="Önizleme">
+                        <div class="flex-1">
+                            <span class="font-semibold text-blue-800 block text-[11px]">Fotoğraf seçildi</span>
+                            <span class="text-slate-500 text-[10px]">Not kaydedildiğinde bu fotoğraf eklenecektir.</span>
+                        </div>
+                        <button onclick="removeTempPhoto()" class="text-red-500 hover:text-red-700 p-1.5"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+
+                <!-- Notes List Container -->
+                <div class="space-y-2.5">
+                    <div class="flex justify-between items-center px-1">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-list-check mr-1.5 text-blue-500"></i>Kayıtlı Notlar</h3>
+                        <span class="text-xs font-semibold text-slate-400" id="current-notes-count">0 Not</span>
+                    </div>
+
+                    <div id="notes-container" class="notes-container custom-scrollbar space-y-2.5">
+                        <!-- Populated via renderDetails() -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-3 sm:p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center text-xs">
+                <button onclick="backToFlatsModal()" class="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i> <span>Başka Daire Seç</span>
+                </button>
+                <button onclick="closeFlatNotesModal()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-colors">
+                    Tamamlandı
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 2. ŞANTİYELERİM / ÇOKLU ŞANTİYE LİSTESİ VE YÖNETİMİ     -->
+    <!-- (Birden fazla şantiyeyi listeler ve anında geçiş yaptırır)-->
+    <!-- ======================================================== -->
+    <div id="sites-list-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+            <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-city"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-800">Şantiyelerim & Projeler</h3>
+                        <p class="text-xs text-slate-500">Çalışmak istediğiniz şantiyeyi seçin veya yeni ekleyin</p>
+                    </div>
+                </div>
+                <button onclick="closeSitesListModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-3 custom-scrollbar">
+                <!-- Yeni Şantiye Ekle Butonu -->
+                <button onclick="openSiteModal(true); closeSitesListModal();" class="w-full py-3 px-4 rounded-xl border-2 border-dashed border-blue-300 hover:border-blue-600 bg-blue-50/50 hover:bg-blue-50 text-blue-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all">
+                    <i class="fa-solid fa-plus-circle text-base"></i>
+                    <span>+ Yeni Şantiye / Proje Oluştur</span>
+                </button>
+
+                <!-- Şantiyeler Listesi -->
+                <div id="sites-list-container" class="space-y-2.5">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <div class="p-3 sm:p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+                <button onclick="deleteAllSites()" class="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-xl border border-red-200 transition-colors font-semibold flex items-center gap-1.5" title="Kayıtlı tüm projeleri sil">
+                    <i class="fa-solid fa-trash-can"></i> <span>Tüm Şantiyeleri Sil</span>
+                </button>
+                <button onclick="closeSitesListModal()" class="px-5 py-2 rounded-xl text-slate-600 hover:bg-slate-200 text-xs sm:text-sm font-semibold transition-all">
+                    Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 1. YENİ ŞANTİYE OLUŞTURMA & DÜZENLEME MODALI             -->
+    <!-- (Koyu renkli şantiye bilgileri ve kat yapılandırması)    -->
+    <!-- ======================================================== -->
+    <div id="site-modal" class="fixed inset-0 bg-[#060b18]/85 backdrop-blur-md hidden z-[120] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-[#0f172a] rounded-3xl shadow-2xl w-full max-w-xl border border-slate-700/60 overflow-hidden my-auto transition-all">
+            
+            <!-- Modal Header -->
+            <div class="p-5 sm:p-6 pb-4 flex items-start justify-between border-b border-slate-800">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-cyan-950/70 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl shadow-inner">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white tracking-tight" id="site-modal-title">Yeni Şantiye / Proje Oluştur</h3>
+                        <p class="text-xs text-slate-400 mt-0.5" id="site-modal-subtitle">CAD ve mahal yönetimi için yeni proje tanımı</p>
+                    </div>
+                </div>
+                <button onclick="closeSiteModal()" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- ADIM 1: Şantiye Bilgileri Ekranı -->
+            <div id="site-step-1" class="p-5 sm:p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Şantiye / Proje Adı <span class="text-cyan-400">*</span></label>
+                    <input type="text" id="site-name-input" placeholder="Örn: Bornova Rezidans & Yaşam Merkezi"
+                        class="w-full bg-[#0a0f1d] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Proje Kodu</label>
+                        <input type="text" id="site-code-input" placeholder="PROJ-2026"
+                            class="w-full bg-[#0a0f1d] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Konum / Şehir</label>
+                        <input type="text" id="site-location-input" placeholder="İzmir, Karşıyaka"
+                            class="w-full bg-[#0a0f1d] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Müteahhit / Yüklenici</label>
+                        <input type="text" id="site-contractor-input" placeholder="Apex Yapı A.Ş."
+                            class="w-full bg-[#0a0f1d] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">İşveren / Kurum</label>
+                        <input type="text" id="site-employer-input" placeholder="Büyükşehir Belediyesi"
+                            class="w-full bg-[#0a0f1d] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Başlangıç Tarihi</label>
+                        <input type="date" id="site-start-date-input"
+                            class="w-full bg-[#0a0f1d] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Hedef Bitiş Tarihi</label>
+                        <input type="date" id="site-end-date-input"
+                            class="w-full bg-[#0a0f1d] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="pt-4 flex justify-end items-center gap-3">
+                    <button onclick="closeSiteModal()" class="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 text-sm font-medium transition-colors">
+                        İptal
+                    </button>
+                    <button onclick="proceedToFloorConfig()" class="bg-[#06b6d4] hover:bg-[#0891b2] text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm shadow-lg shadow-cyan-500/25 transition-all active:scale-95 flex items-center gap-2">
+                        <span>Şantiyeyi Oluştur</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ADIM 2: Kat ve Kattaki Daire Adetleri Paneli (Kesintisiz Artan Daire Numaraları) -->
+            <div id="site-step-2" class="p-5 sm:p-6 space-y-4 hidden">
+                <div class="bg-cyan-950/40 border border-cyan-500/20 rounded-2xl p-3.5 flex items-center justify-between text-xs">
+                    <div>
+                        <span class="text-cyan-400 font-bold block" id="step2-project-name">Şantiye Kat & Daire Planı</span>
+                        <span class="text-slate-400 text-[11px]">Daire numaraları 1'den başlayıp katlar boyunca sırayla artar.</span>
+                    </div>
+                    <span class="bg-cyan-500/20 text-cyan-300 text-[10px] font-bold px-2.5 py-1 rounded-full border border-cyan-500/30">Adım 2 / 2</span>
+                </div>
+
+                <!-- Hızlı Şablon Oluşturucu -->
+                <div class="bg-[#0a0f1d] border border-slate-700/60 rounded-2xl p-4 space-y-3">
+                    <div class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-sliders text-cyan-400"></i> Hızlı Kat & Daire Dağılımı
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Normal Kat Sayısı</label>
+                            <input type="number" id="builder-floor-count" min="1" max="50" value="10" 
+                                class="w-full bg-[#111827] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-semibold outline-none focus:border-cyan-400">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Kat Başına Daire</label>
+                            <input type="number" id="builder-flat-count" min="1" max="30" value="4" 
+                                class="w-full bg-[#111827] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-semibold outline-none focus:border-cyan-400">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1.5">Daire Numaralandırma Başlangıcı:</label>
+                        <select id="builder-start-floor" class="w-full bg-[#111827] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400">
+                            <option value="1">1. Kattan Başlasın (Daire 01, 02... | Zemin Dükkan/Kapıcı)</option>
+                            <option value="ZMN">Zemin Kattan Başlasın (Daire 01, 02...)</option>
+                        </select>
+                    </div>
+
+                    <div class="pt-1 border-t border-slate-800">
+                        <label class="block text-[11px] text-slate-400 mb-1.5">Dahil Edilecek Özel Katlar / Alanlar:</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-slate-300">
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" id="include-bodrum" checked class="rounded border-slate-700 text-cyan-500"> Bodrum Kat
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" id="include-zemin" checked class="rounded border-slate-700 text-cyan-500"> Zemin Kat
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" id="include-cati" checked class="rounded border-slate-700 text-cyan-500"> Çatı Katı
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" id="include-peyzaj" checked class="rounded border-slate-700 text-cyan-500"> Peyzaj / Çevre
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" id="include-genel" checked class="rounded border-slate-700 text-cyan-500"> Genel Notlar
+                            </label>
+                        </div>
+                    </div>
+
+                    <button onclick="generateFloorsFromBuilder()" class="w-full bg-slate-800 hover:bg-slate-700 text-cyan-300 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-colors flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-arrows-rotate"></i> Planı Oluştur / Güncelle
+                    </button>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">Kat & Daire Dağılım Listesi</label>
+                        <span id="step2-flats-summary" class="text-xs text-cyan-400 font-semibold">Toplam 40 Daire</span>
+                    </div>
+                    
+                    <div id="step2-floors-container" class="max-h-56 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="pt-4 flex justify-between items-center border-t border-slate-800">
+                    <button onclick="backToStep1()" class="px-4 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-arrow-left text-xs"></i> <span>Geri</span>
+                    </button>
+                    <button onclick="saveCompleteSiteAndFloors()" class="bg-[#06b6d4] hover:bg-[#0891b2] text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs sm:text-sm shadow-lg shadow-cyan-500/25 transition-all active:scale-95 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-check"></i> <span>Şantiyeyi Kaydet ve Başla</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 3. WHATSAPP ENTEGRASYONU VE VERİ ALMA MODALI              -->
+    <!-- ======================================================== -->
+    <div id="whatsapp-import-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+            <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-800">Veri Al & WhatsApp Entegrasyonu</h3>
+                        <p class="text-xs text-slate-500">WhatsApp'tan gelen Word belgesi veya sohbet metnini aktarın</p>
+                    </div>
+                </div>
+                <button onclick="closeDataImportModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5 custom-scrollbar text-sm">
+                <!-- 1. Yöntem: Dosya Seçimi -->
+                <div class="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200">
+                    <div class="flex items-center gap-2 mb-2 font-bold text-slate-800 text-sm">
+                        <i class="fa-solid fa-file-arrow-down text-emerald-600"></i>
+                        <span>1. Yöntem: WhatsApp'tan Gelen Dosyayı Seçin</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+                        WhatsApp üzerinden gönderilen Word (<strong>.docx</strong>) veya metin belgesini (<strong>.txt</strong>) seçin:
+                    </p>
+                    
+                    <input type="file" id="general-file-upload" accept=".docx,.txt" class="hidden" onchange="handleGeneralFileImport(event)">
+                    <label for="general-file-upload" id="file-upload-button-label" class="w-full bg-white hover:bg-slate-100 text-slate-700 border-2 border-dashed border-slate-300 hover:border-emerald-500 p-4 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all text-center">
+                        <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-slate-800 text-xs sm:text-sm block">Dosya Seçmek İçin Dokunun</span>
+                            <span class="text-[11px] text-slate-400">Desteklenen: Word (.docx), WhatsApp Sohbet Metni (.txt)</span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- 2. Yöntem: Doğrudan Metin Yapıştırma -->
+                <div class="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200">
+                    <div class="flex items-center gap-2 mb-2 font-bold text-slate-800 text-sm">
+                        <i class="fa-solid fa-paste text-blue-600"></i>
+                        <span>2. Yöntem: WhatsApp Mesajlarını Doğrudan Yapıştırın</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-2 leading-relaxed">
+                        WhatsApp sohbetinden kopyaladığınız eksik listesini buraya yapıştırın:
+                    </p>
+                    
+                    <textarea id="whatsapp-paste-input" rows="4" placeholder="Örnek:&#10;1. Kat Daire 2: Mutfak bataryasında su sızıntısı var&#10;Daire 6: Banyo aynası takılmamış (eksiklik giderildi)&#10;Kat 3 Daire 10: Salon parkesinde çizik&#10;Bodrum Sığınak: Aydınlatma lambası yanmıyor"
+                        class="w-full bg-white border border-slate-300 rounded-xl p-3 text-xs sm:text-sm text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all font-mono"></textarea>
+                    
+                    <div class="mt-2.5 flex justify-end">
+                        <button onclick="importFromPastedWhatsAppText()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm shadow-sm transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Metni Tara ve Notlara Ekle</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100 text-xs text-slate-600">
+                    <div class="font-bold text-emerald-800 mb-1.5 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info"></i> WhatsApp'tan Nasıl Dosya Alınır?
+                    </div>
+                    <ol class="list-decimal list-inside space-y-1 text-[11px] text-slate-600">
+                        <li>WhatsApp sohbetinde gelen Word veya metin dosyasının üzerine dokunup <strong>İndir</strong>'e basın.</li>
+                        <li>Yukarıdaki <strong>1. Yöntem</strong>'e dokunup telefonunuzdaki <em>İndirilenler (Downloads)</em> klasöründen dosyayı seçin.</li>
+                        <li>Alternatif olarak, mesaj metnini kopyalayıp <strong>2. Yöntem</strong> kutusuna yapıştırarak tek tıkla aktarabilirsiniz.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="p-3 sm:p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+                <button onclick="closeDataImportModal()" class="px-5 py-2 rounded-xl text-slate-600 hover:bg-slate-200 text-xs sm:text-sm font-semibold transition-all">
+                    Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 5. PDF & PRINT PREVIEW MODAL                             -->
+    <!-- (Fotoğraflar DİK / PORTRAIT A4 formatında ve tam sığar)  -->
+    <!-- ======================================================== -->
+    <div id="print-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+            <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50 gap-3">
+                <div>
+                    <h2 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-file-pdf text-emerald-600"></i>
+                        <span>PDF & Yazdırma Önizleme</span>
+                    </h2>
+                    <p class="text-xs text-slate-500">Denetim tablosu ve fotoğraflı tespit ekleri (Yatay A4)</p>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="saveReportPDF('landscape')" id="download-pdf-btn" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all" title="Fotoğraflı tam raporu yatay A4 olarak indir">
+                        <i class="fa-solid fa-file-pdf"></i> <span>PDF Kaydet (Yatay A4)</span>
+                    </button>
+                    <button onclick="triggerPrintNow()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all">
+                        <i class="fa-solid fa-print"></i> <span>Yazdır</span>
+                    </button>
+                    <button onclick="closePrintModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar bg-slate-50/50">
+                <div id="printable-report-wrapper" class="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm max-w-5xl mx-auto">
+                    <!-- Injected dynamically via generatePrintHTML() -->
+                </div>
+            </div>
+
+            <div class="p-3 sm:p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center text-xs text-slate-500">
+                <span id="print-modal-summary-count">Toplam 0 Kayıt</span>
+                <button onclick="closePrintModal()" class="px-4 py-1.5 rounded-xl font-medium text-slate-600 hover:bg-slate-200 transition-all">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Image Viewer Modal -->
+    <div id="image-viewer-modal" class="fixed inset-0 bg-black/85 hidden z-[130] flex items-center justify-center p-4" onclick="closeImageViewer()">
+        <div class="relative max-w-3xl max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
+            <button onclick="closeImageViewer()" class="absolute -top-10 right-0 text-white text-2xl hover:text-slate-300">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <img id="modal-viewer-img" src="" class="max-w-full max-h-[80vh] rounded-xl shadow-2xl object-contain border border-slate-700" alt="Büyük Görsel">
+            <p id="modal-viewer-caption" class="text-white text-xs sm:text-sm mt-3 text-center"></p>
+        </div>
+    </div>
+
+    <!-- Executive Summary Modal -->
+    <div id="report-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+            <div class="p-4 sm:p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h2 class="text-base sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-purple-600"></i>
+                        <span>Yönetici Özeti ve Genel Veri Değerlendirmesi</span>
+                    </h2>
+                    <p class="text-xs text-slate-500">Saha geçici kabul bulguları ve teknik heyet görüşü</p>
+                </div>
+                <button onclick="closeReportModal()" class="text-slate-400 hover:text-slate-600 transition-colors p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div id="report-content-area" class="p-4 sm:p-6 overflow-y-auto flex-1 text-sm text-slate-700 space-y-6 custom-scrollbar">
+                <!-- Dynamically populated via JS -->
+            </div>
+            
+            <div class="p-4 sm:p-6 border-t border-slate-200 bg-slate-50 flex flex-wrap justify-between items-center gap-3">
+                <button id="edit-report-btn" onclick="toggleEditReport()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl font-medium transition-all text-xs sm:text-sm">
+                    <i class="fa-solid fa-pencil mr-1"></i> Düzenle
+                </button>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="saveExecutivePDF()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl font-medium transition-all text-xs sm:text-sm shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-pdf"></i> PDF Kaydet
+                    </button>
+                    <button onclick="printExecutiveReport()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl font-medium transition-all text-xs sm:text-sm shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Yazdır
+                    </button>
+                    <button onclick="closeReportModal()" class="px-4 py-2 rounded-xl font-medium text-slate-600 hover:bg-slate-200 transition-all text-xs sm:text-sm">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Dedicated Print Container -->
+    <div id="print-container" style="display:none;"></div>
+
+    <!-- Custom Alert/Confirm Modal -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 hidden z-[140] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300 border border-slate-200" id="custom-modal-box">
+            <div class="p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-2" id="custom-modal-title">Bildirim</h3>
+                <div class="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed" id="custom-modal-message"></div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2.5" id="custom-modal-actions">
+                <!-- Dynamically populated via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================================
+        // 0. AÇILIŞ / SPLASH ANİMASYON YÖNETİMİ
+        // ========================================================
+        function dismissSplashScreen() {
+            const splash = document.getElementById('splash-screen');
+            if (!splash || splash.dataset.dismissed === 'true') return;
+            splash.dataset.dismissed = 'true';
+            splash.style.opacity = '0';
+            splash.style.pointerEvents = 'none';
+            setTimeout(() => {
+                splash.style.display = 'none';
+            }, 700);
+        }
+
+        // --- Multi-Site Application State ---
+        let state = {
+            sites: [],            // Tüm kayıtlı şantiyelerin listesi
+            activeSiteId: null,   // Aktif seçili şantiyenin benzersiz ID'si
+            projectInfo: {},
+            projectTitle: '',
+            floorsConfig: [],
+            selectedFloor: '1',
+            selectedFlat: 1,
+            data: {},
+            tempPhoto: null
+        };
+
+        let isCreatingNewSite = false;
+        let tempProjectInfo = {};
+        let tempFloorsConfig = [];
+
+        const DEFAULT_SPECIAL_AREAS = {
+            'GENEL': { name: 'GENEL', flats: ["Genel Şantiye Notları"] },
+            'BODRUM': { name: 'BODRUM', flats: ["Sığınak", "Su Deposu", "Hidrofor Odası", "Kapalı Otopark"] },
+            'ZMN': { name: 'ZEMİN', flats: ["Dükkan 1", "Dükkan 2", "Kapıcı D."] },
+            'ÇATI': { name: 'ÇATI', flats: ["Asansör Kulesi", "Çatı İzolasyon", "Parapetler", "Baca ve Şaftlar"] },
+            'PEYZAJ': { name: 'PEYZAJ', flats: ["Yürüyüş Yolları", "Açık Otopark", "Yeşil Alanlar", "Aydınlatma", "Çevre Duvarı"] }
+        };
+
+        // --- Custom Alert/Confirm/Prompt System ---
+        function showModalFrame() {
+            const m = document.getElementById('custom-modal');
+            m.classList.remove('hidden');
+            setTimeout(() => {
+                m.classList.remove('opacity-0');
+                document.getElementById('custom-modal-box').classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeCustomModal() {
+            const m = document.getElementById('custom-modal');
+            m.classList.add('opacity-0');
+            document.getElementById('custom-modal-box').classList.add('scale-95');
+            setTimeout(() => {
+                m.classList.add('hidden');
+            }, 250);
+        }
+
+        function showCustomAlert(message, title="Bilgi") {
+            document.getElementById('custom-modal-title').innerText = title;
+            document.getElementById('custom-modal-message').innerText = message;
+            document.getElementById('custom-modal-actions').innerHTML = `<button onclick="closeCustomModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl font-medium text-sm transition-colors shadow-sm">Tamam</button>`;
+            showModalFrame();
+        }
+
+        function showCustomConfirm(message, onConfirm, title="Dikkat") {
+            document.getElementById('custom-modal-title').innerText = title;
+            document.getElementById('custom-modal-message').innerText = message;
+            document.getElementById('custom-modal-actions').innerHTML = `
+                <button onclick="closeCustomModal()" class="px-4 py-2 rounded-xl font-medium text-slate-600 hover:bg-slate-200 text-sm transition-colors">İptal</button>
+                <button id="custom-modal-confirm-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-medium text-sm shadow-sm transition-colors">Onayla</button>
+            `;
+            document.getElementById('custom-modal-confirm-btn').onclick = () => {
+                closeCustomModal();
+                onConfirm();
+            };
+            showModalFrame();
+        }
+
+        function showCustomPrompt(title, defaultValue, onConfirm, confirmText = "Kaydet", labelText = null) {
+            document.getElementById('custom-modal-title').innerText = title;
+            const computedLabel = labelText || (typeof defaultValue === 'string' && defaultValue.endsWith('.pdf') ? 'Dosya Adı (.pdf):' : 'Değer:');
+            document.getElementById('custom-modal-message').innerHTML = `
+                <div class="mt-2">
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">${computedLabel}</label>
+                    <input type="text" id="custom-modal-prompt-input" value="${defaultValue || ''}" 
+                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 transition-all font-medium"
+                        onkeydown="if(event.key === 'Enter') document.getElementById('custom-modal-prompt-btn').click();">
+                </div>
+            `;
+            document.getElementById('custom-modal-actions').innerHTML = `
+                <button onclick="closeCustomModal()" class="px-4 py-2 rounded-xl font-medium text-slate-600 hover:bg-slate-200 text-sm transition-colors">İptal</button>
+                <button id="custom-modal-prompt-btn" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl font-medium text-sm shadow-sm transition-colors">${confirmText}</button>
+            `;
+            document.getElementById('custom-modal-prompt-btn').onclick = () => {
+                const val = document.getElementById('custom-modal-prompt-input').value;
+                closeCustomModal();
+                onConfirm(val);
+            };
+            showModalFrame();
+            setTimeout(() => {
+                const inp = document.getElementById('custom-modal-prompt-input');
+                if (inp) {
+                    inp.focus();
+                    inp.select();
+                }
+            }, 80);
+        }
+
+        // ========================================================
+        // 2. ÇOKLU ŞANTİYE VE ŞANTİYE YÖNETİM SİSTEMİ
+        // ========================================================
+
+        
+        // ========================================================
+        // HIZLI DAİRE ARAMA MOTORU
+        // ========================================================
+        function handleQuickFlatSearch(query) {
+            const resultsContainer = document.getElementById('quick-search-results');
+            if (!resultsContainer) return;
+            const q = (query || '').trim().toLowerCase();
+            if (!q) {
+                resultsContainer.classList.add('hidden');
+                resultsContainer.innerHTML = '';
+                return;
+            }
+
+            const matches = [];
+            if (state.floorsConfig) {
+                state.floorsConfig.forEach(f => {
+                    const count = getFlatCountForArea(f.id);
+                    for (let fl = 1; fl <= count; fl++) {
+                        const flatName = getFlatDisplayName(f.id, fl);
+                        const key = `${f.id}_${fl}`;
+                        const data = state.data[key];
+                        const openCount = data && data.notes ? data.notes.filter(n => n.status === 'Açık').length : 0;
+                        const isApproved = data && data.isApproved;
+
+                        // Match against flat name (e.g. "Daire 14", "14", "Zemin")
+                        const numMatch = flatName.match(/\d+/);
+                        const flatNum = numMatch ? numMatch[0] : '';
+                        
+                        if (flatName.toLowerCase().includes(q) || flatNum === q || (q.length >= 2 && f.name.toLowerCase().includes(q))) {
+                            matches.push({ floorId: f.id, floorName: f.name, flatIndex: fl, flatName, openCount, isApproved });
+                        }
+                    }
+                });
+            }
+
+            if (matches.length === 0) {
+                resultsContainer.innerHTML = '<div class="p-2 text-xs text-slate-400 text-center">Eşleşen daire bulunamadı</div>';
+            } else {
+                resultsContainer.innerHTML = matches.slice(0, 10).map(m => {
+                    const badge = m.isApproved 
+                        ? '<span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">Kabul</span>'
+                        : (m.openCount > 0 ? `<span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">${m.openCount} Açık</span>` : '<span class="text-[10px] text-slate-400">Temiz</span>');
+                    return `
+                        <div onclick="selectQuickSearchResult('${m.floorId}', ${m.flatIndex})" class="p-2 hover:bg-blue-50 rounded-lg cursor-pointer flex items-center justify-between transition-colors border border-transparent hover:border-blue-200">
+                            <div>
+                                <span class="font-bold text-xs text-slate-800">${m.flatName}</span>
+                                <span class="text-[11px] text-slate-400 ml-1.5">(${m.floorName})</span>
+                            </div>
+                            ${badge}
+                        </div>`;
+                }).join('');
+            }
+            resultsContainer.classList.remove('hidden');
+        }
+
+        function selectQuickSearchResult(floorId, flatIndex) {
+            const resultsContainer = document.getElementById('quick-search-results');
+            if (resultsContainer) resultsContainer.classList.add('hidden');
+            const searchInput = document.getElementById('quick-flat-search-input');
+            if (searchInput) searchInput.value = '';
+
+            state.selectedFloor = floorId;
+            openFlatDetailsModal(flatIndex);
+        }
+
+        // Close search popup when clicking outside
+        document.addEventListener('click', function(e) {
+            const sc = document.getElementById('quick-search-results');
+            const si = document.getElementById('quick-flat-search-input');
+            if (sc && !sc.contains(e.target) && e.target !== si) {
+                sc.classList.add('hidden');
+            }
+        });
+
+        // ========================================================
+        // INDEXEDDB DEPOLAMA MOTORU (SINIRSIZ FOTOĞRAF KAPASİTESİ)
+        // ========================================================
+        const AppStorage = {
+            dbName: 'TerminalTakipDB',
+            dbVersion: 1,
+            storeName: 'sites_store',
+            db: null,
+            init() {
+                return new Promise((resolve) => {
+                    if (!window.indexedDB) { resolve(null); return; }
+                    try {
+                        const req = indexedDB.open(this.dbName, this.dbVersion);
+                        req.onupgradeneeded = (e) => {
+                            const db = e.target.result;
+                            if (!db.objectStoreNames.contains(this.storeName)) {
+                                db.createObjectStore(this.storeName);
+                            }
+                        };
+                        req.onsuccess = (e) => {
+                            this.db = e.target.result;
+                            resolve(this.db);
+                        };
+                        req.onerror = () => resolve(null);
+                    } catch(err) { resolve(null); }
+                });
+            },
+            save(key, data) {
+                if (this.db) {
+                    try {
+                        const tx = this.db.transaction(this.storeName, 'readwrite');
+                        tx.objectStore(this.storeName).put(data, key);
+                    } catch(e) { console.warn("IDB save error:", e); }
+                }
+                try {
+                    localStorage.setItem(key, JSON.stringify(data));
+                } catch(e) {
+                    console.warn("localStorage kotası aşıldı, veriler güvenle IndexedDB'de saklanıyor.");
+                }
+            },
+            async load(key) {
+                if (!this.db) await this.init();
+                if (this.db) {
+                    const fromIDB = await new Promise((resolve) => {
+                        try {
+                            const tx = this.db.transaction(this.storeName, 'readonly');
+                            const req = tx.objectStore(this.storeName).get(key);
+                            req.onsuccess = () => resolve(req.result);
+                            req.onerror = () => resolve(null);
+                        } catch(e) { resolve(null); }
+                    });
+                    if (fromIDB) return fromIDB;
+                }
+                try {
+                    const fromLocal = localStorage.getItem(key);
+                    return fromLocal ? JSON.parse(fromLocal) : null;
+                } catch(e) { return null; }
+            }
+        };
+
+        // Initialize IndexedDB on startup
+        AppStorage.init();
+
+        function saveSitesToStorage() {
+            try {
+                if (state.activeSiteId) {
+                    const active = state.sites.find(s => s.id === state.activeSiteId);
+                    if (active) {
+                        active.info = state.projectInfo;
+                        active.name = state.projectTitle;
+                        active.floorsConfig = state.floorsConfig;
+                        active.data = state.data;
+                    }
+                }
+                localStorage.setItem('kabulPanoSites_v6', JSON.stringify(state.sites));
+                localStorage.setItem('kabulPanoActiveSiteId_v6', state.activeSiteId);
+            } catch(e) {
+                console.error("Storage save error", e);
+            }
+        }
+
+        function setActiveSite(siteId, shouldSave = true) {
+            const target = state.sites.find(s => s.id === siteId);
+            if (!target) return;
+
+            // Sync current active site data first
+            if (state.activeSiteId && state.activeSiteId !== siteId) {
+                const current = state.sites.find(s => s.id === state.activeSiteId);
+                if (current) {
+                    current.info = state.projectInfo;
+                    current.name = state.projectTitle;
+                    current.floorsConfig = state.floorsConfig;
+                    current.data = state.data;
+                }
+            }
+
+            state.activeSiteId = target.id;
+            state.projectInfo = target.info || { title: target.name };
+            state.projectTitle = target.info.title || target.name;
+            state.floorsConfig = target.floorsConfig || [];
+            state.data = target.data || {};
+
+            recalculateSequentialNumbers(state.floorsConfig);
+
+            const firstFlatsFloor = state.floorsConfig.find(f => f.type === 'flats');
+            state.selectedFloor = firstFlatsFloor ? firstFlatsFloor.id : (state.floorsConfig[0]?.id || '1');
+            state.selectedFlat = 1;
+
+            if (shouldSave) saveSitesToStorage();
+
+            updateProjectHeaderDOM();
+            renderFloors();
+            updateGlobalProgress();
+        }
+
+        function openSitesListModal() {
+            const container = document.getElementById('sites-list-container');
+            container.innerHTML = '';
+
+            if (!state.sites || state.sites.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2 text-slate-300 block"></i>
+                        <p class="text-sm font-medium">Kayıtlı herhangi bir şantiye bulunmuyor.</p>
+                        <p class="text-xs text-slate-400 mt-1">Yeni bir şantiye oluşturmak için yukarıdaki butona dokunun.</p>
+                    </div>
+                `;
+                document.getElementById('sites-list-modal').classList.remove('hidden');
+                return;
+            }
+
+            state.sites.forEach(site => {
+                const isActive = site.id === state.activeSiteId;
+                
+                // Calculate mini progress
+                let totalNotes = 0, doneNotes = 0;
+                if (site.data) {
+                    for (let k in site.data) {
+                        if (site.data[k] && site.data[k].notes) {
+                            totalNotes += site.data[k].notes.length;
+                            doneNotes += site.data[k].notes.filter(n => n.status === 'Yapıldı').length;
+                        }
+                    }
+                }
+                const pct = totalNotes > 0 ? Math.round((doneNotes / totalNotes) * 100) : 0;
+
+                container.innerHTML += `
+                    <div class="border ${isActive ? 'border-blue-500 bg-blue-50/40 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:border-slate-300'} rounded-2xl p-4 transition-all">
+                        <div class="flex items-start justify-between gap-3 mb-2">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold text-slate-800 text-sm sm:text-base">${site.name}</h4>
+                                    ${isActive ? '<span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Aktif</span>' : ''}
+                                </div>
+                                <div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-3">
+                                    <span><i class="fa-solid fa-hashtag text-slate-400 mr-1"></i>${site.info?.code || 'PROJ'}</span>
+                                    <span><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>${site.info?.location || '-'}</span>
+                                    <span><i class="fa-solid fa-hard-hat text-slate-400 mr-1"></i>${site.info?.contractor || '-'}</span>
+                                </div>
+                            </div>
+
+                            <div class="text-right">
+                                <span class="text-base font-black text-emerald-600">%${pct}</span>
+                                <span class="block text-[10px] text-slate-400">${doneNotes}/${totalNotes} Çözüldü</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <span class="text-[11px] text-slate-400">${site.floorsConfig?.length || 0} Kat Tanımlı</span>
+                            <div class="flex items-center gap-2">
+                                ${!isActive ? `
+                                    <button onclick="setActiveSite('${site.id}'); closeSitesListModal();" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-colors flex items-center gap-1">
+                                        <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i> <span>Bu Şantiyeye Geç</span>
+                                    </button>
+                                ` : `
+                                    <span class="text-xs text-blue-700 font-semibold px-2 py-1"><i class="fa-solid fa-check mr-1"></i>Şu An Seçili</span>
+                                `}
+                                <button onclick="editSiteFromList('${site.id}')" class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors text-xs" title="Düzenle">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </button>
+                                <button onclick="deleteSite('${site.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs" title="Şantiyeyi Sil">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('sites-list-modal').classList.remove('hidden');
+        }
+
+        function closeSitesListModal() {
+            document.getElementById('sites-list-modal').classList.add('hidden');
+        }
+
+        function deleteSite(siteId) {
+            const target = state.sites.find(s => s.id === siteId);
+            if (!target) return;
+
+            showCustomConfirm(`"${target.name}" şantiyesini ve buna ait tüm denetim notlarını silmek istediğinize emin misiniz?`, () => {
+                state.sites = state.sites.filter(s => s.id !== siteId);
+                
+                if (state.sites.length === 0) {
+                    state.activeSiteId = null;
+                    state.projectTitle = "Şantiye Seçilmedi";
+                    state.projectInfo = {};
+                    state.floorsConfig = [];
+                    state.data = {};
+                    localStorage.removeItem('kabulPanoSites_v6');
+                    localStorage.removeItem('kabulPanoActiveSiteId_v6');
+                    localStorage.removeItem('kabulPanoSiteConfig_v5');
+                    localStorage.removeItem('kabulPanoData_v4');
+                    updateProjectHeaderDOM();
+                    renderFloors();
+                    updateGlobalProgress();
+                    closeSitesListModal();
+                    openSiteModal(true);
+                    showCustomAlert(`"${target.name}" şantiyesini sildiniz. Hiç kayıtlı şantiye kalmadığı için yeni şantiye oluşturma ekranı açıldı.`, "Silindi");
+                } else {
+                    if (state.activeSiteId === siteId) {
+                        state.activeSiteId = state.sites[0].id;
+                    }
+                    setActiveSite(state.activeSiteId, true);
+                    openSitesListModal();
+                    showCustomAlert("Şantiye başarıyla silindi.", "Silindi");
+                }
+            });
+        }
+
+        function deleteAllSites() {
+            if (!state.sites || state.sites.length === 0) {
+                showCustomAlert("Silinecek herhangi bir şantiye bulunmuyor.", "Bilgi");
+                return;
+            }
+
+            showCustomConfirm("Kayıtlı TÜM şantiyeleri ve içerdikleri tüm denetim notlarını kalıcı olarak silmek istediğinize emin misiniz?", () => {
+                state.sites = [];
+                state.activeSiteId = null;
+                state.projectTitle = "Şantiye Seçilmedi";
+                state.projectInfo = {};
+                state.floorsConfig = [];
+                state.data = {};
+                localStorage.removeItem('kabulPanoSites_v6');
+                localStorage.removeItem('kabulPanoActiveSiteId_v6');
+                localStorage.removeItem('kabulPanoSiteConfig_v5');
+                localStorage.removeItem('kabulPanoData_v4');
+                updateProjectHeaderDOM();
+                renderFloors();
+                updateGlobalProgress();
+                closeSitesListModal();
+                openSiteModal(true);
+                showCustomAlert("Tüm şantiyeler ve kayıtlar başarıyla silindi. Yeni bir şantiye oluşturarak başlayabilirsiniz.", "Tümü Silindi");
+            });
+        }
+
+        function editSiteFromList(siteId) {
+            closeSitesListModal();
+            setActiveSite(siteId, false);
+            openSiteModal(false);
+        }
+
+        // ========================================================
+        // 1. ŞANTİYE OLUŞTURMA & DÜZENLEME MANTIĞI
+        // ========================================================
+
+        function openSiteModal(isNew = false) {
+            isCreatingNewSite = isNew;
+
+            if (isNew) {
+                document.getElementById('site-modal-title').innerText = "Yeni Şantiye / Proje Oluştur";
+                document.getElementById('site-modal-subtitle').innerText = "CAD ve mahal yönetimi için yeni proje tanımı";
+                document.getElementById('site-name-input').value = "";
+                document.getElementById('site-code-input').value = "PROJ-" + (state.sites.length + 1).toString().padStart(2, '0');
+                document.getElementById('site-location-input').value = "";
+                document.getElementById('site-contractor-input').value = "";
+                document.getElementById('site-employer-input').value = "";
+                document.getElementById('site-start-date-input').value = new Date().toISOString().split('T')[0];
+                document.getElementById('site-end-date-input').value = "";
+            } else {
+                document.getElementById('site-modal-title').innerText = "Şantiye Bilgilerini Düzenle";
+                document.getElementById('site-modal-subtitle').innerText = "Mevcut şantiye detaylarını ve kat dağılımını güncelleyin";
+                document.getElementById('site-name-input').value = state.projectInfo.title || state.projectTitle || "";
+                document.getElementById('site-code-input').value = state.projectInfo.code || "PROJ-2026";
+                document.getElementById('site-location-input').value = state.projectInfo.location || "";
+                document.getElementById('site-contractor-input').value = state.projectInfo.contractor || "";
+                document.getElementById('site-employer-input').value = state.projectInfo.employer || "";
+                document.getElementById('site-start-date-input').value = state.projectInfo.startDate || "";
+                document.getElementById('site-end-date-input').value = state.projectInfo.endDate || "";
+            }
+
+            document.getElementById('site-step-1').classList.remove('hidden');
+            document.getElementById('site-step-2').classList.add('hidden');
+            document.getElementById('site-modal').classList.remove('hidden');
+        }
+
+        function closeSiteModal() {
+            document.getElementById('site-modal').classList.add('hidden');
+        }
+
+        function proceedToFloorConfig() {
+            const name = document.getElementById('site-name-input').value.trim();
+            if (!name) {
+                showCustomAlert("Lütfen bir Şantiye / Proje Adı giriniz.", "Eksik Alan");
+                return;
+            }
+
+            tempProjectInfo = {
+                title: name,
+                code: document.getElementById('site-code-input').value.trim() || 'PROJ',
+                location: document.getElementById('site-location-input').value.trim() || 'İzmir',
+                contractor: document.getElementById('site-contractor-input').value.trim() || 'Apex Yapı A.Ş.',
+                employer: document.getElementById('site-employer-input').value.trim() || 'Büyükşehir Belediyesi',
+                startDate: document.getElementById('site-start-date-input').value || '',
+                endDate: document.getElementById('site-end-date-input').value || ''
+            };
+
+            document.getElementById('step2-project-name').innerText = tempProjectInfo.title;
+            document.getElementById('site-step-1').classList.add('hidden');
+            document.getElementById('site-step-2').classList.remove('hidden');
+
+            if (!isCreatingNewSite && state.floorsConfig && state.floorsConfig.length > 0) {
+                tempFloorsConfig = JSON.parse(JSON.stringify(state.floorsConfig));
+                renderFloorConfigList();
+            } else {
+                generateFloorsFromBuilder();
+            }
+        }
+
+        function backToStep1() {
+            document.getElementById('site-step-2').classList.add('hidden');
+            document.getElementById('site-step-1').classList.remove('hidden');
+        }
+
+        function generateFloorsFromBuilder() {
+            const normalFloorCount = parseInt(document.getElementById('builder-floor-count').value) || 10;
+            const flatCountPerFloor = parseInt(document.getElementById('builder-flat-count').value) || 4;
+            const startFloorChoice = document.getElementById('builder-start-floor').value;
+            
+            const incGenel = document.getElementById('include-genel').checked;
+            const incBodrum = document.getElementById('include-bodrum').checked;
+            const incZemin = document.getElementById('include-zemin').checked;
+            const incCati = document.getElementById('include-cati').checked;
+            const incPeyzaj = document.getElementById('include-peyzaj').checked;
+
+            const list = [];
+
+            if (incGenel) {
+                list.push({ id: 'GENEL', name: 'GENEL', type: 'special', flats: ["Genel Şantiye Notları"] });
+            }
+            if (incBodrum) {
+                list.push({ id: 'BODRUM', name: 'BODRUM', type: 'special', flats: ["Sığınak", "Su Deposu", "Hidrofor Odası", "Kapalı Otopark"] });
+            }
+            if (incZemin) {
+                if (startFloorChoice === 'ZMN') {
+                    list.push({ id: 'ZMN', name: 'ZEMİN', type: 'flats', count: flatCountPerFloor });
+                } else {
+                    list.push({ id: 'ZMN', name: 'ZEMİN', type: 'special', flats: ["Dükkan 1", "Dükkan 2", "Kapıcı D."] });
+                }
+            }
+
+            for (let f = 1; f <= normalFloorCount; f++) {
+                list.push({
+                    id: f.toString(),
+                    name: `${f}. KAT`,
+                    type: 'flats',
+                    count: flatCountPerFloor
+                });
+            }
+
+            if (incCati) {
+                list.push({ id: 'ÇATI', name: 'ÇATI', type: 'special', flats: ["Asansör Kulesi", "Çatı İzolasyon", "Parapetler", "Baca ve Şaftlar"] });
+            }
+            if (incPeyzaj) {
+                list.push({ id: 'PEYZAJ', name: 'PEYZAJ', type: 'special', flats: ["Yürüyüş Yolları", "Açık Otopark", "Yeşil Alanlar", "Aydınlatma", "Çevre Duvarı"] });
+            }
+
+            tempFloorsConfig = list;
+            recalculateSequentialNumbers(tempFloorsConfig);
+            renderFloorConfigList();
+        }
+
+        function recalculateSequentialNumbers(floorsList) {
+            let currentSeqNumber = 1;
+            floorsList.forEach(floor => {
+                if (floor.type === 'flats') {
+                    floor.startFlatNo = currentSeqNumber;
+                    floor.count = parseInt(floor.count) || 1;
+                    floor.endFlatNo = currentSeqNumber + floor.count - 1;
+                    currentSeqNumber = floor.endFlatNo + 1;
+                }
+            });
+            return currentSeqNumber - 1;
+        }
+
+        function renderFloorConfigList() {
+            const container = document.getElementById('step2-floors-container');
+            container.innerHTML = '';
+            
+            const totalFlats = recalculateSequentialNumbers(tempFloorsConfig);
+            document.getElementById('step2-flats-summary').innerText = `Toplam ${totalFlats} Daire (Daire 01 - Daire ${totalFlats < 10 ? '0' + totalFlats : totalFlats})`;
+
+            tempFloorsConfig.forEach((floor, idx) => {
+                let badgeOrInput = '';
+                if (floor.type === 'flats') {
+                    const startFmt = floor.startFlatNo < 10 ? `0${floor.startFlatNo}` : floor.startFlatNo;
+                    const endFmt = floor.endFlatNo < 10 ? `0${floor.endFlatNo}` : floor.endFlatNo;
+                    
+                    badgeOrInput = `
+                        <div class="flex items-center gap-2">
+                            <span class="bg-cyan-950 text-cyan-300 border border-cyan-500/40 text-[11px] font-bold px-2 py-0.5 rounded-lg whitespace-nowrap">
+                                Daire ${startFmt} - Daire ${endFmt}
+                            </span>
+                            <div class="flex items-center gap-1">
+                                <label class="text-[10px] text-slate-400">Adet:</label>
+                                <input type="number" min="1" max="50" value="${floor.count}" 
+                                    onchange="updateFloorFlatCount(${idx}, this.value)" 
+                                    class="w-14 bg-[#111827] border border-slate-700 text-center text-xs text-white font-bold py-1 px-1.5 rounded-lg focus:border-cyan-400 outline-none">
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    badgeOrInput = `
+                        <span class="bg-slate-800 text-slate-300 text-[11px] font-medium px-2.5 py-0.5 rounded-lg border border-slate-700 whitespace-nowrap">
+                            ${floor.flats.length} Özel Mahal
+                        </span>
+                    `;
+                }
+
+                container.innerHTML += `
+                    <div class="bg-[#111827] border border-slate-800 rounded-xl p-2.5 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group text-cyan-400 text-xs"></i>
+                            <span class="text-xs font-bold text-white">${floor.name}</span>
+                        </div>
+                        ${badgeOrInput}
+                    </div>
+                `;
+            });
+        }
+
+        function updateFloorFlatCount(index, newCount) {
+            const count = parseInt(newCount) || 1;
+            tempFloorsConfig[index].count = Math.max(1, count);
+            renderFloorConfigList();
+        }
+
+        function saveCompleteSiteAndFloors() {
+            recalculateSequentialNumbers(tempFloorsConfig);
+
+            if (isCreatingNewSite) {
+                // TAMAMEN YENİ ŞANTİYE OLUŞTURMA
+                const newSiteId = "site_" + Date.now();
+                const newSite = {
+                    id: newSiteId,
+                    name: tempProjectInfo.title,
+                    info: JSON.parse(JSON.stringify(tempProjectInfo)),
+                    floorsConfig: JSON.parse(JSON.stringify(tempFloorsConfig)),
+                    data: {},
+                    createdAt: new Date().toISOString()
+                };
+
+                newSite.floorsConfig.forEach(f => {
+                    const count = f.type === 'special' ? (f.flats ? f.flats.length : 1) : (f.count || 4);
+                    for (let fl = 1; fl <= count; fl++) {
+                        newSite.data[`${f.id}_${fl}`] = { isApproved: false, notes: [] };
+                    }
+                });
+
+                state.sites.push(newSite);
+                setActiveSite(newSiteId, true);
+                closeSiteModal();
+                showCustomAlert(`✅ "${newSite.name}" şantiyesi başarıyla oluşturuldu ve aktif edildi!`, "Yeni Şantiye Hazır");
+            } else {
+                // MEVCUT AKTİF ŞANTİYEYİ GÜNCELLEME
+                const active = state.sites.find(s => s.id === state.activeSiteId);
+                if (active) {
+                    active.name = tempProjectInfo.title;
+                    active.info = JSON.parse(JSON.stringify(tempProjectInfo));
+                    active.floorsConfig = JSON.parse(JSON.stringify(tempFloorsConfig));
+
+                    active.floorsConfig.forEach(f => {
+                        const count = f.type === 'special' ? (f.flats ? f.flats.length : 1) : (f.count || 4);
+                        for (let fl = 1; fl <= count; fl++) {
+                            const key = `${f.id}_${fl}`;
+                            if (!active.data[key]) {
+                                active.data[key] = { isApproved: false, notes: [] };
+                            }
+                        }
+                    });
+
+                    setActiveSite(active.id, true);
+                    closeSiteModal();
+                    showCustomAlert("Şantiye bilgileri ve kat planı başarıyla güncellendi!", "Güncellendi");
+                }
+            }
+        }
+
+        function updateProjectHeaderDOM() {
+            const title = state.projectTitle || "Şantiye Seçilmedi";
+            document.getElementById('app-project-title').innerText = title;
+            document.getElementById('page-title').innerText = `${title} - Şantiye Pro`;
+            document.getElementById('current-site-header-name').innerText = `${title} Geçici Kabul Oranı`;
+            document.getElementById('site-count-badge').innerText = `${state.sites ? state.sites.length : 0} Şantiye`;
+            
+            if (state.projectInfo && state.projectInfo.title) {
+                document.getElementById('meta-code').innerText = state.projectInfo.code || 'PROJ';
+                document.getElementById('meta-location').innerHTML = `<i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>${state.projectInfo.location || 'Şantiye'}`;
+                document.getElementById('meta-contractor').innerHTML = `<i class="fa-solid fa-hard-hat text-slate-400 mr-1"></i>${state.projectInfo.contractor || 'Apex Yapı A.Ş.'}`;
+            } else {
+                document.getElementById('meta-code').innerText = '-';
+                document.getElementById('meta-location').innerHTML = `<i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>-`;
+                document.getElementById('meta-contractor').innerHTML = `<i class="fa-solid fa-hard-hat text-slate-400 mr-1"></i>-`;
+            }
+        }
+
+        // ========================================================
+        // 4. AÇILIR PENCERE (MODAL) İLE KAT & DAİRE İŞLEYİŞİ
+        // (Aşağı Kaydırma Zorunluluğunu Tamamen Kaldırır)
+        // ========================================================
+
+        function renderFloors() {
+            const grid = document.getElementById('floor-grid');
+            grid.innerHTML = '';
+            
+            if (!state.floorsConfig || state.floorsConfig.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-200">
+                        <i class="fa-solid fa-building-circle-exclamation text-3xl mb-2 text-slate-300 block"></i>
+                        <p class="text-sm font-medium">Henüz bir kat veya şantiye tanımlanmadı.</p>
+                        <button onclick="openSiteModal(true)" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-plus-circle"></i> <span>Şantiye Oluştur</span>
+                        </button>
+                    </div>
+                `;
+                document.getElementById('total-floors-summary').innerText = `Toplam 0 Kat`;
+                document.getElementById('total-flats-summary').innerText = `Toplam 0 Daire`;
+                return;
+            }
+
+            let totalFlats = 0;
+
+            state.floorsConfig.forEach(f => {
+                const flatCount = getFlatCountForArea(f.id);
+                totalFlats += (f.type === 'flats' ? f.count : 0);
+
+                let approvedCount = 0, openNotesCount = 0;
+                
+                for (let i = 1; i <= flatCount; i++) {
+                    const d = state.data[`${f.id}_${i}`];
+                    if (d) {
+                        if (d.isApproved) approvedCount++;
+                        if (d.notes) {
+                            openNotesCount += d.notes.filter(n => n.status === 'Açık').length;
+                        }
+                    }
+                }
+                
+                let statusBadge = '';
+                if (approvedCount === flatCount && flatCount > 0) {
+                    statusBadge = '<span class="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded whitespace-nowrap"><i class="fa-solid fa-check"></i> Onay</span>';
+                } else if (openNotesCount > 0) {
+                    statusBadge = `<span class="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded whitespace-nowrap">${openNotesCount} Not</span>`;
+                } else {
+                    statusBadge = '<span class="text-[9px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">Temiz</span>';
+                }
+
+                let rangeText = '';
+                if (f.type === 'flats') {
+                    const s = f.startFlatNo < 10 ? '0' + f.startFlatNo : f.startFlatNo;
+                    const e = f.endFlatNo < 10 ? '0' + f.endFlatNo : f.endFlatNo;
+                    rangeText = `D.${s}-${e}`;
+                } else {
+                    rangeText = `${flatCount} Mahal`;
+                }
+
+                grid.innerHTML += `
+                    <div onclick="openFloorFlatsModal('${f.id}')" class="bg-white hover:bg-blue-50/80 active:scale-95 border border-slate-200 hover:border-blue-400 rounded-xl p-2 sm:p-2.5 cursor-pointer transition-all shadow-sm flex flex-col justify-between min-h-[58px] sm:min-h-[64px]">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="font-bold text-slate-800 text-xs sm:text-sm truncate">${f.name}</span>
+                            <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 flex-shrink-0"></i>
+                        </div>
+                        <div class="flex items-center justify-between gap-1 mt-1 text-[10px]">
+                            <span class="font-medium text-slate-500 truncate">${rangeText}</span>
+                            ${statusBadge}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('total-floors-summary').innerText = `Toplam ${state.floorsConfig.length} Kat`;
+            document.getElementById('total-flats-summary').innerText = `Toplam ${totalFlats} Daire`;
+        }
+
+        // Kat Mahalleri Modalını Açar
+        function openFloorFlatsModal(floorId) {
+            state.selectedFloor = floorId;
+            const fConf = getFloorConfig(floorId);
+            const count = getFlatCountForArea(floorId);
+
+            document.getElementById('modal-floor-title').innerText = `${fConf ? fConf.name : ''} Mahalleri`;
+            document.getElementById('modal-floor-subtitle').innerText = `${fConf ? fConf.name : ''} için ${count} adet bağımsız bölüm listesi`;
+            document.getElementById('modal-floor-status-summary').innerText = `Toplam ${count} Bölüm`;
+
+            const grid = document.getElementById('modal-flat-grid');
+            grid.innerHTML = '';
+
+            for (let fl = 1; fl <= count; fl++) {
+                const key = `${floorId}_${fl}`;
+                const data = state.data[key];
+                const name = getFlatDisplayName(floorId, fl);
+
+                let isApproved = data && data.isApproved;
+                let openNotes = data && data.notes ? data.notes.filter(n => n.status === 'Açık').length : 0;
+                let doneNotes = data && data.notes ? data.notes.filter(n => n.status === 'Yapıldı').length : 0;
+
+                let cardStyle = isApproved 
+                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300' 
+                    : (openNotes > 0 
+                        ? 'bg-amber-50 text-amber-900 border-amber-300' 
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400');
+
+                let noteBadge = '';
+                if (openNotes > 0) {
+                    noteBadge = `<span class="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${openNotes} Açık</span>`;
+                } else if (doneNotes > 0) {
+                    noteBadge = `<span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Çözüldü</span>`;
+                }
+
+                grid.innerHTML += `
+                    <button onclick="openFlatDetailsModal(${fl})" class="border ${cardStyle} p-3.5 rounded-2xl flex flex-col justify-between items-start gap-2 shadow-sm hover:shadow transition-all active:scale-95 text-left w-full min-h-[85px]">
+                        <div class="flex items-center justify-between w-full">
+                            <span class="font-bold text-xs sm:text-sm">${name}</span>
+                            ${isApproved ? '<i class="fa-solid fa-circle-check text-emerald-500 text-base"></i>' : ''}
+                        </div>
+                        <div class="w-full flex items-center justify-between text-[11px]">
+                            ${noteBadge ? noteBadge : '<span class="text-slate-400">Not Yok</span>'}
+                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+                        </div>
+                    </button>
+                `;
+            }
+
+            document.getElementById('floor-flats-modal').classList.remove('hidden');
+        }
+
+        function closeFloorFlatsModal() {
+            document.getElementById('floor-flats-modal').classList.add('hidden');
+        }
+
+        // Daire Notları & Açıklamalar Açılır Kartını Açar
+        function openFlatDetailsModal(flatIndex) {
+            state.selectedFlat = flatIndex;
+            closeFloorFlatsModal();
+
+            const fConf = getFloorConfig(state.selectedFloor);
+            const floorDisplay = fConf ? fConf.name : state.selectedFloor;
+            const flatDisplay = getFlatDisplayName(state.selectedFloor, state.selectedFlat);
+
+            document.getElementById('flat-modal-subtitle').innerText = `${floorDisplay} / ${flatDisplay}`;
+            document.getElementById('flat-modal-title').innerText = `${flatDisplay} Açıklamalar`;
+
+            renderDetails();
+            document.getElementById('flat-notes-modal').classList.remove('hidden');
+        }
+
+        function closeFlatNotesModal() {
+            document.getElementById('flat-notes-modal').classList.add('hidden');
+            renderFloors();
+            updateGlobalProgress();
+        }
+
+        function backToFlatsModal() {
+            document.getElementById('flat-notes-modal').classList.add('hidden');
+            openFloorFlatsModal(state.selectedFloor);
+        }
+
+        function getFloorConfig(floorId) {
+            return state.floorsConfig.find(f => f.id.toString() === floorId.toString());
+        }
+
+        function getFlatCountForArea(floorId) {
+            const f = getFloorConfig(floorId);
+            if (!f) return 4;
+            if (f.type === 'special') return f.flats ? f.flats.length : 1;
+            return f.count || 4;
+        }
+
+        function getFlatDisplayName(floorId, flatIndex) {
+            const f = getFloorConfig(floorId);
+            if (!f) return `DAİRE ${flatIndex}`;
+            if (f.type === 'special') {
+                return (f.flats && f.flats[flatIndex - 1]) || `Bölüm ${flatIndex}`;
+            }
+            const seq = (f.startFlatNo || 1) + (flatIndex - 1);
+            const formatted = seq < 10 ? `0${seq}` : seq;
+            return `DAİRE ${formatted}`;
+        }
+
+        function findFloorAndFlatBySequentialNumber(flatNumber) {
+            if (!state.floorsConfig) return null;
+            for (let f of state.floorsConfig) {
+                if (f.type === 'flats' && f.startFlatNo && f.endFlatNo) {
+                    if (flatNumber >= f.startFlatNo && flatNumber <= f.endFlatNo) {
+                        return {
+                            floorId: f.id,
+                            flatIndex: flatNumber - f.startFlatNo + 1
+                        };
+                    }
+                }
+            }
+            return null;
+        }
+
+        // ========================================================
+        // 5. DETERMİNİSTİK SAYFA-SAYFA PDF MOTORU (TERMINAL TAKİP)
+        // Her A4 sayfası önce gerçek ölçülerle hesaplanır, sonra TEK TEK çizilir.
+        // html2pdf'in otomatik sayfa bölme mantığı kullanılmaz; bu sayede
+        // boş sayfa, ikiye bölünen satır veya taşan fotoğraf oluşmaz.
+        // ========================================================
+
+        const PDF_MARGIN_MM = [4, 6, 4, 6]; 
+        const PDF_FONT = "system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif";
+        const PDF_CELL = 'padding:6px 8px; border:1px solid #cbd5e1; vertical-align:top; overflow-wrap:break-word; word-wrap:break-word; white-space:normal; color:#1e293b; overflow:hidden;';
+        const PDF_TABLE_STYLE = 'width:1285px !important; min-width:1285px !important; max-width:1285px !important; border-collapse:collapse; table-layout:fixed; font-size:10.5px; text-align:left; white-space:normal;';
+        const PDF_COLGROUP = '<colgroup><col style="width:12%"><col style="width:16%"><col style="width:11%"><col style="width:45%"><col style="width:8%"><col style="width:8%"></colgroup>';
+
+        function getPdfPageMetrics(orientation) {
+            const isPortrait = orientation === 'portrait';
+            // 20mm (2cm) her kenardan boşluk bırakılmış kağıt alanı (257mm x 170mm)
+            // Piksel boyutları: 257 / 170 = 1.5117 -> 1285px x 850px
+            const w = isPortrait ? 850 : 1285; 
+            const h = isPortrait ? 1285 : 850;
+            return { w, h, innerW: w, innerH: h, budget: h };
+        }
+
+        function escPdf(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/\n/g, '<br>');
+        }
+
+        function wrapPdfPage(innerHtml, orientation) {
+            const m = getPdfPageMetrics(orientation);
+            return `<div class="tt-pdf-page" style="width:${m.w}px; height:${m.h}px; padding:0; box-sizing:border-box; background:#ffffff; font-family:${PDF_FONT}; color:#0f172a; text-align:left; position:relative; overflow:hidden;">${innerHtml}</div>`;
+        }
+
+        function collectReportData() {
+            let totalCount = 0, closedCount = 0, openCount = 0;
+            const rows = [], photos = [];
+            state.floorsConfig.forEach(f => {
+                const flatCount = getFlatCountForArea(f.id);
+                for (let fl = 1; fl <= flatCount; fl++) {
+                    const d = state.data[`${f.id}_${fl}`];
+                    if (!d || !d.notes || d.notes.length === 0) continue;
+                    d.notes.forEach(n => {
+                        totalCount++;
+                        if (n.status === 'Yapıldı') closedCount++; else openCount++;
+                        const floorName = f.name;
+                        const flatName = getFlatDisplayName(f.id, fl);
+                        let photoIndex = null;
+                        if (n.photo) {
+                            photoIndex = photos.length + 1;
+                            photos.push({
+                                floorName, flatName,
+                                date: formatDate(n.createdAt),
+                                text: n.text, status: n.status, resolvedAt: n.resolvedAt,
+                                photo: n.photo, index: photoIndex
+                            });
+                        }
+                        rows.push({ floorName, flatName, note: n, photoIndex });
+                    });
+                }
+            });
+            return { totalCount, closedCount, openCount, rows, photos };
+        }
+
+        // ---------- HTML parçaları ----------
+        function buildMainHeaderHtml(c, pageNum, pageTotal) {
+            const pct = c.totalCount > 0 ? Math.round((c.closedCount / c.totalCount) * 100) : 0;
+            return `
+                <div style="border-bottom:2px solid #0f172a; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center;">
+                        <img src="${c.logo}" style="width:38px; height:38px; border-radius:6px; border:1px solid #cbd5e1; margin-right:10px; display:block;" alt="Logo">
+                        <div>
+                            <div style="font-size:8.5px; font-weight:bold; color:#dc2626; text-transform:uppercase; letter-spacing:0.05em;">TERMINAL TAKİP - SAHA DENETİM SİSTEMİ</div>
+                            <div style="font-size:14px; font-weight:bold; margin-top:1px; color:#0f172a; line-height:1.2;">${escPdf(state.projectTitle)}</div>
+                            <div style="font-size:9.5px; color:#64748b; margin-top:1px;">
+                                Kod: ${escPdf(state.projectInfo?.code || '-')} | Konum: ${escPdf(state.projectInfo?.location || '-')} | Yüklenici: ${escPdf(state.projectInfo?.contractor || '-')}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align:right; font-size:9.5px; color:#64748b; line-height:1.35;">
+                        <div><strong>Rapor Tarihi:</strong> ${c.dateStr}</div>
+                        <div><strong>Durum:</strong> ${c.closedCount} / ${c.totalCount} Çözüldü (%${pct})</div>
+                        <div><strong>Fotoğraf Eki:</strong> ${c.photos.length} Adet &nbsp;|&nbsp; <strong>Sayfa ${pageNum} / ${pageTotal}</strong></div>
+                    </div>
+                </div>`;
+        }
+
+        function buildContHeaderHtml(c, subtitle, pageNum, pageTotal) {
+            return `
+                <div style="border-bottom:2px solid #0f172a; padding-bottom:4px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center;">
+                        <img src="${c.logo}" style="width:26px; height:26px; border-radius:5px; border:1px solid #cbd5e1; margin-right:8px; display:block;" alt="Logo">
+                        <div>
+                            <div style="font-size:8px; font-weight:bold; color:#dc2626; text-transform:uppercase; letter-spacing:0.05em;">TERMINAL TAKİP - ${subtitle}</div>
+                            <div style="font-size:12px; font-weight:bold; color:#0f172a; line-height:1.2;">${escPdf(state.projectTitle)}</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right; font-size:9px; color:#64748b; line-height:1.35;">
+                        <div><strong>Rapor Tarihi:</strong> ${c.dateStr}</div>
+                        <div><strong>Sayfa ${pageNum} / ${pageTotal}</strong></div>
+                    </div>
+                </div>`;
+        }
+
+        function buildTheadHtml() {
+            const th = 'padding:6px 7px; border:1px solid #94a3b8; font-weight:bold; background-color:#f1f5f9; color:#334155; overflow:hidden;';
+            return `
+                <thead style="display:table-header-group;">
+                    <tr>
+                        <th style="${th} width:154px; min-width:154px; max-width:154px;">Kat / Alan</th>
+                        <th style="${th} width:205px; min-width:205px; max-width:205px;">Mahal / Daire</th>
+                        <th style="${th} width:141px; min-width:141px; max-width:141px;">Tespit Tarihi</th>
+                        <th style="${th} width:579px; min-width:579px; max-width:579px;">Açıklamalar / Kusur &amp; Mevcut Durum</th>
+                        <th style="${th} width:103px; min-width:103px; max-width:103px; text-align:center;">Statü</th>
+                        <th style="${th} width:103px; min-width:103px; max-width:103px; text-align:center;">Çözüm</th>
+                    </tr>
+                </thead>`;
+        }
+
+        function buildRowHtml(r) {
+            const n = r.note;
+            const done = n.status === 'Yapıldı';
+            const statusBadge = done
+                ? '<span style="color:#059669; font-weight:bold;">YAPILDI</span>'
+                : '<span style="color:#dc2626; font-weight:bold;">AÇIK</span>';
+            const photoRef = r.photoIndex
+                ? `<div style="margin-top:3px;"><span style="display:inline-block; font-size:9px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:4px; padding:1px 5px; font-weight:600;">Fotoğraf Eki #${r.photoIndex}</span></div>`
+                : '';
+            return `
+                <tr style="page-break-inside:avoid; break-inside:avoid;">
+                    <td style="${PDF_CELL}"><strong>${escPdf(r.floorName)}</strong></td>
+                    <td style="${PDF_CELL}">${escPdf(r.flatName)}</td>
+                    <td style="${PDF_CELL} white-space:nowrap;">${formatDate(n.createdAt)}</td>
+                    <td style="${PDF_CELL}"><div style="font-size:10.5px; line-height:1.35;">${escPdf(n.text)}</div>${photoRef}</td>
+                    <td style="${PDF_CELL} text-align:center;">${statusBadge}</td>
+                    <td style="${PDF_CELL} text-align:center; white-space:nowrap;">${done && n.resolvedAt ? formatDate(n.resolvedAt) : '-'}</td>
+                </tr>`;
+        }
+
+        function buildEmptyRowHtml() {
+            return `<tr><td colspan="6" style="text-align:center; padding:25px; color:#94a3b8; border:1px solid #cbd5e1;">Kayıtlı herhangi bir eksik veya açıklama bulunmamaktadır.</td></tr>`;
+        }
+
+        function buildSummaryFooterHtml(c) {
+            return `
+                <div style="margin-top:10px; padding-top:6px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:8.5px; color:#94a3b8;">
+                    <span>${escPdf(state.projectTitle)} - Terminal Takip</span>
+                    <span>Toplam ${c.totalCount} Tespit | ${c.closedCount} Tamamlandı | ${c.openCount} Açık</span>
+                </div>`;
+        }
+
+        function buildPhotoCardHtml(p, total) {
+            const done = p.status === 'Yapıldı';
+            const txt = String(p.text || '');
+            const shortTxt = txt.length > 200 ? txt.slice(0, 197) + '...' : txt;
+            return `
+                <div class="photo-card-item" style="box-sizing:border-box; width:100%; height:100%; max-width:100%; max-height:100%; min-width:0; min-height:0; overflow:hidden; background:#ffffff; border:1.5px solid #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-direction:column; page-break-inside:avoid !important;">
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:5px 8px; margin-bottom:5px; flex-shrink:0; overflow:hidden; min-width:0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:3px; margin-bottom:3px; min-width:0;">
+                            <div style="font-size:11px; font-weight:bold; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; margin-right:6px;">
+                                <span style="color:#2563eb; margin-right:6px;">${escPdf(p.floorName)}</span>
+                                <span style="background:#e0e7ff; color:#3730a3; padding:1px 6px; border-radius:4px; font-size:10px;">${escPdf(p.flatName)}</span>
+                            </div>
+                            <span style="flex-shrink:0; font-size:9px; font-weight:bold; padding:2px 6px; border-radius:4px; ${done ? 'background:#dcfce7; color:#15803d;' : 'background:#fee2e2; color:#b91c1c;'}">${done ? 'GİDERİLDİ' : 'AÇIK'}</span>
+                        </div>
+                        <div style="font-size:10.5px; color:#1e293b; line-height:1.35; overflow-wrap:anywhere; word-break:break-word; max-height:42px; overflow:hidden;"><strong style="color:#0f172a;">Açıklama:</strong> ${escPdf(shortTxt)}</div>
+                    </div>
+                    <div style="flex-grow:1; flex-shrink:1; min-height:0; display:flex; align-items:center; justify-content:center; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; padding:4px; overflow:hidden;">
+                        <img src="${p.photo}" style="max-width:100%; max-height:100%; width:auto; height:auto; display:block; margin:auto; object-fit:contain; border-radius:4px;" alt="Tespit Fotoğrafı">
+                    </div>
+                    <div style="flex-shrink:0; margin-top:5px; display:flex; justify-content:space-between; font-size:9px; color:#64748b; border-top:1px solid #f1f5f9; padding-top:3px; overflow:hidden; min-width:0;">
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:4px;">Tespit: ${p.date}${p.resolvedAt ? ' | Çözüm: ' + formatDate(p.resolvedAt) : ''}</span>
+                        <span style="flex-shrink:0;">Fotoğraf #${p.index} / ${total}</span>
+                    </div>
+                </div>`;
+        }
+
+        // ---------- Ölçüm yardımcıları ----------
+        function createMeasureBox(width) {
+            let box = document.getElementById('pdf-measure-box');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'pdf-measure-box';
+                document.body.appendChild(box);
+            }
+            box.style.cssText = `position:absolute; left:-9999px; top:0; width:${width}px; display:flow-root; visibility:hidden; pointer-events:none; background:#fff; font-family:${PDF_FONT}; color:#0f172a; text-align:left; box-sizing:border-box; padding:0; margin:0; border:0;`;
+            return box;
+        }
+
+        function measureBlock(box, html) {
+            box.innerHTML = html;
+            return Math.ceil(box.getBoundingClientRect().height);
+        }
+
+        // ---------- Sayfa oluşturucu ----------
+        async function buildReportPages() {
+            const data = collectReportData();
+            const ctx = Object.assign({ dateStr: formatDate(document.getElementById('inspection-date').value), logo: 'img/logo.png' }, data);
+
+            const mLand = getPdfPageMetrics('landscape');
+            const mPort = getPdfPageMetrics('portrait');
+            
+            const box = createMeasureBox(mLand.innerW);
+            
+            const tablePlan = [];
+            const photoPlan = []; 
+            
+            // --- 1) Tablo Sayfaları (Yatay / Landscape) ---
+            const mainH = measureBlock(box, buildMainHeaderHtml(ctx, 99, 99));
+            const contH = measureBlock(box, buildContHeaderHtml(ctx, 'SAHA DENETİM RAPORU (DEVAM)', 99, 99));
+            const footerH = measureBlock(box, buildSummaryFooterHtml(ctx));
+            const rowHtmls = data.rows.length ? data.rows.map(buildRowHtml) : [buildEmptyRowHtml()];
+            
+            box.innerHTML = `<table style="${PDF_TABLE_STYLE}">${buildTheadHtml()}<tbody>${rowHtmls.join('')}</tbody></table>`;
+            const theadH = Math.ceil(box.querySelector('thead').getBoundingClientRect().height);
+            const rowHs = Array.from(box.querySelectorAll('tbody > tr')).map(tr => Math.ceil(tr.getBoundingClientRect().height));
+
+            let cur = [], used = 0;
+            const getBudgetForTable = (isFirst) => mLand.budget - (isFirst ? mainH : contH) - theadH - 5;
+            
+            rowHs.forEach((h, i) => {
+                const isFirst = tablePlan.length === 0;
+                if (cur.length > 0 && used + h > getBudgetForTable(isFirst)) {
+                    tablePlan.push(cur);
+                    cur = []; used = 0;
+                }
+                cur.push(i); used += h;
+            });
+            if (cur.length) tablePlan.push(cur);
+
+            const lastIdx = tablePlan.length - 1;
+            const lastUsed = tablePlan[lastIdx].reduce((s, i) => s + rowHs[i], 0);
+            if (lastUsed + footerH > getBudgetForTable(lastIdx === 0)) {
+                if (tablePlan[lastIdx].length > 1) tablePlan.push([tablePlan[lastIdx].pop()]);
+                else tablePlan.push([]); 
+            }
+
+            // --- 2) Fotoğraf Sayfaları (Dikey / Portrait, 2x2 Grid) ---
+            box.style.width = mPort.innerW + 'px';
+            const photoHeaderH = measureBlock(box, buildContHeaderHtml(ctx, 'FOTOĞRAF EKLERİ VE KUSUR TESPİT BELGELERİ', 99, 99));
+            
+            // Çok sayıda fotoğraf için 4'lü gruplama
+            for (let i = 0; i < data.photos.length; i += 4) {
+                photoPlan.push(data.photos.slice(i, i + 4));
+            }
+
+            // --- 3) HTML Sayfalarını Oluştur ---
+            const totalPages = tablePlan.length + photoPlan.length;
+            const pageDefs = [];
+
+            tablePlan.forEach((idxs, ci) => {
+                const isFirst = ci === 0;
+                const isLast = ci === tablePlan.length - 1;
+                const pageNum = ci + 1;
+                
+                const head = isFirst ? buildMainHeaderHtml(ctx, pageNum, totalPages) : buildContHeaderHtml(ctx, 'SAHA DENETİM RAPORU (DEVAM)', pageNum, totalPages);
+                const table = idxs.length ? `<table style="${PDF_TABLE_STYLE}">${buildTheadHtml()}<tbody>${idxs.map(i => rowHtmls[i]).join('')}</tbody></table>` : '';
+                const foot = isLast ? buildSummaryFooterHtml(ctx) : '';
+                
+                pageDefs.push({ html: wrapPdfPage(head + table + foot, 'landscape'), orientation: 'landscape' });
+            });
+
+            photoPlan.forEach((photos, pi) => {
+                const pageNum = tablePlan.length + pi + 1;
+                const head = buildContHeaderHtml(ctx, 'FOTOĞRAF EKLERİ VE KUSUR TESPİT BELGELERİ', pageNum, totalPages);
+                
+                const gap = 14;
+                const gridH = mPort.budget - photoHeaderH - 18;
+                
+                const cardsHtml = photos.map(p => buildPhotoCardHtml(p, data.photos.length)).join('');
+                const body = `<div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:${gap}px; width:100%; height:${gridH}px; box-sizing:border-box; margin-top:6px;">${cardsHtml}</div>`;
+                
+                pageDefs.push({ html: wrapPdfPage(head + body, 'portrait'), orientation: 'portrait' });
+            });
+            
+            if (box && box.parentNode) box.parentNode.removeChild(box);
+            return { pageDefs };
+        }
+
+        // ---------- Önizleme / Yazdırma ----------
+        function renderReportPreview(built) {
+            const host = document.getElementById('printable-report-wrapper');
+            const cs = getComputedStyle(host);
+            const innerW = host.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+            
+            host.innerHTML = built.pageDefs.map((def, i) => {
+                const m = getPdfPageMetrics(def.orientation);
+                const s = Math.min(1, Math.max(0.2, innerW / m.w));
+                return `
+                <div style="width:${Math.floor(m.w * s)}px; height:${Math.ceil(m.h * s)}px; margin:0 auto ${i < built.pageDefs.length - 1 ? 14 : 0}px auto; overflow:hidden; background:#ffffff; box-shadow:0 0 0 1px #cbd5e1, 0 2px 6px rgba(15,23,42,0.08);">
+                    <div style="width:${m.w}px; transform:scale(${s}); transform-origin:top left;">${def.html}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function openPrintModal() {
+            const host = document.getElementById('printable-report-wrapper');
+            let totalNotes = 0;
+            for (let k in state.data) {
+                if (state.data[k].notes) totalNotes += state.data[k].notes.length;
+            }
+            document.getElementById('print-modal-summary-count').innerText = `Toplam ${totalNotes} Açıklama Kaydı Mevcut`;
+            document.getElementById('print-modal').classList.remove('hidden');
+            host.innerHTML = '<div style="padding:40px; text-align:center; color:#64748b; font-size:14px;"><i class="fa-solid fa-spinner fa-spin"></i> Rapor sayfaları hazırlanıyor...</div>';
+            try {
+                const built = await buildReportPages();
+                renderReportPreview(built);
+            } catch (e) {
+                console.error('Preview build failed:', e);
+                host.innerHTML = '<div style="padding:40px; text-align:center; color:#b91c1c;">Rapor önizlemesi oluşturulamadı.</div>';
+            }
+        }
+
+        function closePrintModal() {
+            document.getElementById('print-modal').classList.add('hidden');
+        }
+
+        async function triggerPrintNow() {
+            try {
+                const built = await buildReportPages();
+                const printContainer = document.getElementById('print-container');
+                const n = built.pageDefs.length;
+                printContainer.innerHTML = built.pageDefs.map((def, i) =>
+                    `<div class="tt-print-${def.orientation}" style="width:${getPdfPageMetrics(def.orientation).w}px; margin:0 auto; ${i < n - 1 ? 'page-break-after:always; break-after:page;' : ''}">${def.html}</div>`
+                ).join('');
+                setTimeout(() => window.print(), 300);
+            } catch (e) {
+                console.error('Print build failed:', e);
+                showCustomAlert('Yazdırma için rapor hazırlanamadı.', 'Hata');
+            }
+        }
+
+        async function saveToAndroidStorage(base64DataUri, fileName) {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+                const Filesystem = window.Capacitor.Plugins.Filesystem;
+                const base64Data = base64DataUri.includes(',') ? base64DataUri.split(',')[1] : base64DataUri;
+                
+                try {
+                    const res1 = await Filesystem.writeFile({
+                        path: 'Download/Terminal Takip/' + fileName,
+                        data: base64Data,
+                        directory: 'EXTERNAL_STORAGE',
+                        recursive: true
+                    });
+                    return { success: true, folder: 'Download / Terminal Takip', uri: res1.uri };
+                } catch (e1) {
+                    console.warn("External storage attempt:", e1);
+                }
+
+                try {
+                    const res2 = await Filesystem.writeFile({
+                        path: 'Terminal Takip/' + fileName,
+                        data: base64Data,
+                        directory: 'DOCUMENTS',
+                        recursive: true
+                    });
+                    return { success: true, folder: 'Belgeler (Documents) / Terminal Takip', uri: res2.uri };
+                } catch (e2) {
+                    console.warn("Documents attempt:", e2);
+                }
+            }
+            return { success: false };
+        }
+
+        async function deliverPdfDocument(pdf, suggestedFileName) {
+            const dataUri = pdf.output('datauristring');
+            const pdfBlob = pdf.output('blob');
+
+            const nativeSave = await saveToAndroidStorage(dataUri, suggestedFileName);
+            if (nativeSave.success) {
+                showCustomAlert(`✅ PDF dosyası başarıyla telefonunuza kaydedildi!\n\n📂 Klasör: ${nativeSave.folder}\n📄 Dosya: ${suggestedFileName}`, "Kayıt Başarılı");
+                return;
+            }
+
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const fileHandle = await window.showSaveFilePicker({
+                        suggestedName: suggestedFileName,
+                        types: [{ description: 'PDF Belgesi (*.pdf)', accept: { 'application/pdf': ['.pdf'] } }]
+                    });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(pdfBlob);
+                    await writable.close();
+                    showCustomAlert("PDF dosyası seçtiğiniz konuma başarıyla kaydedildi!", "Başarılı");
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') return;
+                }
+            }
+            
+            const pdfFile = new File([pdfBlob], suggestedFileName, { type: 'application/pdf' });
+            if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                try {
+                    await navigator.share({ files: [pdfFile], title: state.projectTitle, text: `${state.projectTitle} - Kabul Raporu` });
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') return;
+                }
+            }
+
+            const url = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = suggestedFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+            showCustomAlert(`PDF dosyası İndirilenler klasörüne kaydedildi: ${suggestedFileName}`, "Kayıt Başarılı");
+        }
+
+        async function renderPagedPdf(pageDefs) {
+            // Tamamen yalıtılmış bir ortam yaratmak için iframe kullanıyoruz.
+            // Bu, cihazın viewport sınırlarını, global CSS kurallarını ve Android Webview kırpmalarını %100 atlatır.
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.left = '0';
+            iframe.style.top = '0';
+            iframe.style.zIndex = '-9999';
+            iframe.style.opacity = '0';
+            iframe.style.width = '1500px'; 
+            iframe.style.height = '1500px';
+            iframe.style.border = 'none';
+            document.body.appendChild(iframe);
+
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        body { margin: 0; padding: 0; background: #ffffff; overflow: hidden; }
+                        * { box-sizing: border-box; }
+                    </style>
+                </head>
+                <body>
+                    <div id="pdf-root"></div>
+                </body>
+                </html>
+            `);
+            doc.close();
+
+            let masterPdf;
+            const pdfRoot = doc.getElementById('pdf-root');
+
+            try {
+                for (let i = 0; i < pageDefs.length; i++) {
+                    const def = pageDefs[i];
+                    const isPort = def.orientation === 'portrait';
+                    const pxW = isPort ? 850 : 1285;
+                    const pxH = isPort ? 1285 : 850;
+
+                    pdfRoot.style.width = pxW + 'px';
+                    pdfRoot.style.height = pxH + 'px';
+                    pdfRoot.innerHTML = def.html;
+                    
+                    const images = pdfRoot.querySelectorAll('img');
+                    await Promise.all(Array.from(images).map(img => {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise(resolve => {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        });
+                    }));
+                    await new Promise(r => setTimeout(r, 250));
+
+                    const canvasWorker = html2pdf().set({
+                        margin: 0,
+                        html2canvas: { 
+                            scale: 2, 
+                            useCORS: true, 
+                            logging: false,
+                            windowWidth: pxW,
+                            windowHeight: pxH,
+                            width: pxW,
+                            height: pxH,
+                            x: 0,
+                            y: 0,
+                            scrollX: 0,
+                            scrollY: 0
+                        }
+                    }).from(pdfRoot.firstElementChild);
+                    
+                    // DÜZELTME: html2pdf, klonu telefon ekranına göre ortalanmış bir kapsayıcıya koyuyor;
+                    // bu yüzden içerik sağa kayıp son sütunlar kesiliyordu. Kapsayıcıyı sola sabitleyip
+                    // sayfa piksel boyutuna eşitliyoruz.
+                    const canvas = await canvasWorker.toContainer().then(() => {
+                        const c = document.querySelector('.html2pdf__container');
+                        if (c) {
+                            c.style.left = '0'; c.style.right = 'auto'; c.style.top = '0';
+                            c.style.margin = '0'; c.style.width = pxW + 'px'; c.style.height = pxH + 'px';
+                        }
+                        const ov = document.querySelector('.html2pdf__overlay');
+                        if (ov) { ov.style.left = '0'; ov.style.top = '0'; }
+                    }).toCanvas().get('canvas');
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    
+                    const pdfW = isPort ? 170 : 257; // 210 - 40, 297 - 40
+                    const pdfH = isPort ? 257 : 170;
+
+                    if (i === 0) {
+                        masterPdf = await html2pdf().set({
+                            margin: 0,
+                            jsPDF: { unit: 'mm', format: 'a4', orientation: def.orientation }
+                        }).from(doc.createElement('div')).toPdf().get('pdf');
+                        
+                        masterPdf.addImage(imgData, 'JPEG', 20, 20, pdfW, pdfH);
+                    } else {
+                        masterPdf.addPage('a4', def.orientation);
+                        masterPdf.addImage(imgData, 'JPEG', 20, 20, pdfW, pdfH);
+                    }
+                }
+            } finally {
+                document.body.removeChild(iframe);
+            }
+            
+            return masterPdf;
+        }
+
+        async function executeSaveAsPDF(element, suggestedFileName, orientation = 'landscape') {
+            const opt = {
+                margin: PDF_MARGIN_MM,
+                filename: suggestedFileName,
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: orientation },
+                pagebreak: { mode: ['css'], avoid: ['tr', 'p', 'li', 'h1', 'h2', 'h3', 'h4', '.avoid-break'] }
+            };
+            try {
+                const pdf = await html2pdf().set(opt).from(element).toPdf().get('pdf');
+                await deliverPdfDocument(pdf, suggestedFileName);
+            } catch (e) {
+                console.error("PDF generation failed:", e);
+                showCustomAlert("PDF oluşturulamadı. 'Yazdır' menüsünden 'PDF Olarak Kaydet' seçeneğini kullanabilirsiniz.", "Bilgi");
+            }
+        }
+
+        function saveReportPDF() {
+            const safeName = (state.projectTitle || 'Terminal_Takip').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30);
+            const defaultFileName = `${safeName}_Kabul_Raporu_${new Date().toISOString().split('T')[0]}.pdf`;
+            
+            showCustomPrompt("Kaydedilecek PDF dosya adını belirleyin:", defaultFileName, async (chosenFileName) => {
+                let finalFileName = (chosenFileName || '').trim();
+                if (!finalFileName) finalFileName = defaultFileName;
+                if (!finalFileName.toLowerCase().endsWith('.pdf')) finalFileName += '.pdf';
+
+                const btn = document.getElementById('download-pdf-btn');
+                const orig = btn ? btn.innerHTML : '';
+                if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> İşleniyor...'; btn.disabled = true; }
+                try {
+                    const built = await buildReportPages();
+                    const pdf = await renderPagedPdf(built.pageDefs);
+                    await deliverPdfDocument(pdf, finalFileName);
+                } catch (e) {
+                    console.error("PDF generation failed:", e);
+                    showCustomAlert("PDF oluşturulamadı. 'Yazdır' menüsünden 'PDF Olarak Kaydet' seçeneğini kullanabilirsiniz.", "Bilgi");
+                } finally {
+                    if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+                }
+            }, "PDF Kaydet");
+        }
+
+
+        // ========================================================
+        // 3. VERİ AL & WHATSAPP ENTEGRASYONU MANTIĞI
+        // ========================================================
+
+        function openDataImportModal() {
+            document.getElementById('whatsapp-paste-input').value = '';
+            document.getElementById('whatsapp-import-modal').classList.remove('hidden');
+        }
+
+        function closeDataImportModal() {
+            document.getElementById('whatsapp-import-modal').classList.add('hidden');
+        }
+
+        function parseInspectionLines(lines, date) {
+            let currFloor = null, currFlat = null;
+            let importedCount = 0;
+
+            lines.forEach(rawLine => {
+                let l = rawLine.trim().replace(/^[-*•]\s*/, '');
+                if (!l) return;
+
+                // 1. WhatsApp zaman damgaları ve gönderen isimlerini temizle
+                // Örn: [12.10.2026, 14:15:22] Ali: ... veya 12.10.2026 14:15 - Ali Usta: ...
+                l = l.replace(/^\[?\d{1,2}[./:\-]\d{1,2}[./:\-]\d{2,4},?\s*\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?\]?\s*[-:]?\s*[^:]*:\s*/i, '');
+                l = l.replace(/^\d{1,2}[./:\-]\d{1,2}[./:\-]\d{2,4}\s+\d{1,2}:\d{2}\s*-\s*[^:]*:\s*/i, '');
+                l = l.replace(/^[^:\n]{2,30}:\s*(?=(?:kat|daire|bodrum|zemin|çatı|peyzaj|\d))/i, '');
+                if (!l) return;
+
+                // 2. Kombine Format: "1. Kat Daire 3: cam kolu kırık" veya "2. Kat D-04: kapı bozuk"
+                let comboMatch = l.match(/^(?:(\d{1,2})\.?\s*Kat|ZEMİN|ZEMIN|ZMN|BODRUM|ÇATI|CATI|PEYZAJ|GENEL)[\s,/-]+(?:Daire|D\.|D-|No\.?|Bölüm)?\s*(\d{1,3})[:\-\s]*(.*)/i);
+                if (comboMatch) {
+                    let floorPart = comboMatch[1];
+                    let flatNum = parseInt(comboMatch[2]);
+                    let noteText = (comboMatch[3] || '').trim();
+
+                    let targetFloor = null;
+                    let targetFlat = null;
+
+                    if (floorPart) {
+                        targetFloor = floorPart.toString();
+                        let fConf = getFloorConfig(targetFloor);
+                        if (fConf && flatNum >= fConf.startFlatNo && flatNum <= fConf.endFlatNo) {
+                            targetFlat = flatNum - fConf.startFlatNo + 1;
+                        } else {
+                            targetFlat = flatNum;
+                        }
+                    } else {
+                        let found = findFloorAndFlatBySequentialNumber(flatNum);
+                        if (found) {
+                            targetFloor = found.floorId;
+                            targetFlat = found.flatIndex;
+                        }
+                    }
+
+                    if (targetFloor && targetFlat && noteText.length > 2) {
+                        if (addNoteToState(targetFloor, targetFlat, noteText, date)) importedCount++;
+                        return;
+                    }
+                }
+
+                // 3. Tek Başına Daire Numarası: "Daire 14: mutfak bataryası" veya "D-05 kapı"
+                let flatMatch = l.match(/^(?:DAİRE|DAIRE|D|D\.|D-|NO\.?)\s*(\d{1,3})[:\-\s]*(.*)/i);
+                if (flatMatch) {
+                    let flatNum = parseInt(flatMatch[1]);
+                    let noteText = (flatMatch[2] || '').trim();
+                    let found = findFloorAndFlatBySequentialNumber(flatNum);
+                    if (found) {
+                        currFloor = found.floorId;
+                        currFlat = found.flatIndex;
+                        if (noteText.length > 2) {
+                            if (addNoteToState(currFloor, currFlat, noteText, date)) importedCount++;
+                        }
+                    } else if (currFloor) {
+                        currFlat = flatNum;
+                        if (noteText.length > 2) {
+                            if (addNoteToState(currFloor, currFlat, noteText, date)) importedCount++;
+                        }
+                    }
+                    return;
+                }
+
+                // 4. Sadece Kat Başlığı: "3. Kat:" veya "Zemin Kat:"
+                let fMatch = l.match(/^(BODRUM|ZEMİN|ZEMIN|ZMN|ÇATI|CATI|PEYZAJ|GENEL|(\d{1,2})\.?\s*KAT)[:\s]*$/i);
+                if (fMatch) {
+                    let rawFloor = fMatch[1].toUpperCase().replace(/Ç/g, 'C').replace(/İ/g, 'I');
+                    if (rawFloor.includes('KAT')) currFloor = parseInt(fMatch[2]).toString();
+                    else if (rawFloor.includes('ZEMIN') || rawFloor.includes('ZMN')) currFloor = 'ZMN';
+                    else if (rawFloor.includes('CATI')) currFloor = 'ÇATI';
+                    else currFloor = rawFloor;
+                    currFlat = null;
+                    return;
+                }
+
+                // 5. Önceki kat/daire bağlamında devam eden not satırı
+                if (currFloor && currFlat && l.length > 2) {
+                    if (addNoteToState(currFloor, currFlat, l, date)) importedCount++;
+                }
+            });
+
+            return importedCount;
+        }
+
+        function importFromPastedWhatsAppText() {
+            const text = document.getElementById('whatsapp-paste-input').value.trim();
+            if (!text) {
+                showCustomAlert("Lütfen aktarılacak WhatsApp mesaj metnini kutuya yapıştırın.", "Metin Boş");
+                return;
+            }
+
+            const date = document.getElementById('inspection-date').value;
+            const lines = text.split('\n');
+            const importedCount = parseInspectionLines(lines, date);
+
+            saveSitesToStorage();
+            renderFloors();
+            updateGlobalProgress();
+            closeDataImportModal();
+
+            if (importedCount > 0) {
+                showCustomAlert(`✅ Harika! WhatsApp mesajlarından toplam ${importedCount} adet açıklama ilgili kat ve dairelere başarıyla aktarıldı.`, "Aktarım Tamamlandı");
+            } else {
+                showCustomAlert("Metinden kat veya daire tespit edilemedi. Lütfen '1. Kat Daire 3: Eksik notu' gibi bir format kullandığınızdan emin olun.", "Açıklama Bulunamadı");
+            }
+        }
+
+        function handleGeneralFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            const date = document.getElementById('inspection-date').value;
+
+            if (ext === 'docx') {
+                if (typeof mammoth === 'undefined') {
+                    showCustomAlert("Word okuyucu modül yüklenemedi.", "Hata");
+                    return;
+                }
+                const label = document.getElementById('file-upload-button-label');
+                const orig = label.innerHTML;
+                label.innerHTML = '<div class="py-4"><i class="fa-solid fa-spinner fa-spin text-2xl text-emerald-600 mb-2"></i><span class="block font-bold">Word Belgesi Taranıyor...</span></div>';
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    mammoth.extractRawText({arrayBuffer: e.target.result})
+                        .then(function(result) {
+                            const lines = result.value.split('\n');
+                            const importedCount = parseInspectionLines(lines, date);
+                            saveSitesToStorage();
+                            renderFloors();
+                            updateGlobalProgress();
+                            closeDataImportModal();
+                            label.innerHTML = orig;
+
+                            if (importedCount > 0) {
+                                showCustomAlert(`✅ Word belgesinden toplam ${importedCount} adet açıklama ilgili kat ve dairelere başarıyla işlendi.`, "Aktarım Tamamlandı");
+                            } else {
+                                showCustomAlert("Belgeden yeni veri okunamadı veya veriler zaten kayıtlı.", "Veri Bulunamadı");
+                            }
+                        })
+                        .catch(function(err) {
+                            console.error(err);
+                            label.innerHTML = orig;
+                            showCustomAlert("Word dosyası okunurken hata oluştu.", "Hata");
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (ext === 'txt') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const lines = e.target.result.split('\n');
+                    const importedCount = parseInspectionLines(lines, date);
+                    saveSitesToStorage();
+                    renderFloors();
+                    updateGlobalProgress();
+                    closeDataImportModal();
+
+                    if (importedCount > 0) {
+                        showCustomAlert(`✅ Metin dosyasından toplam ${importedCount} adet açıklama başarıyla aktarıldı.`, "Aktarım Tamamlandı");
+                    } else {
+                        showCustomAlert("Metin dosyasında kat ve daire eşleşmesi bulunamadı.", "Veri Bulunamadı");
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                showCustomAlert("Lütfen .docx veya .txt formatında bir dosya seçin.", "Desteklenmeyen Format");
+            }
+
+            event.target.value = '';
+        }
+
+        // ========================================================
+        // 6. UYGULAMA İLK BAŞLATMA VE VERİ YÖNETİMİ
+        // ========================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('inspection-date').value = today;
+
+            initMultiSiteData();
+
+            // Karşılama animasyonu oynadıktan sonra otomatik ana ekrana geçiş (yaklaşık 2 sn)
+            setTimeout(dismissSplashScreen, 2200);
+        });
+
+        window.addEventListener('load', () => {
+            setTimeout(dismissSplashScreen, 2200);
+        });
+
+        function createDefaultFloors() {
+            const legacyFloors = ['GENEL', 'BODRUM', 'ZMN', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 'ÇATI', 'PEYZAJ'];
+            const defaultFloors = [];
+            legacyFloors.forEach(f => {
+                if (DEFAULT_SPECIAL_AREAS[f]) {
+                    defaultFloors.push({ id: f.toString(), name: f.toString(), type: 'special', flats: DEFAULT_SPECIAL_AREAS[f].flats });
+                } else {
+                    defaultFloors.push({ id: f.toString(), name: `${f}. KAT`, type: 'flats', count: 4 });
+                }
+            });
+            recalculateSequentialNumbers(defaultFloors);
+            return defaultFloors;
+        }
+
+        function initMultiSiteData() {
+            const savedSites = localStorage.getItem('kabulPanoSites_v6');
+            const activeId = localStorage.getItem('kabulPanoActiveSiteId_v6');
+            
+            if (savedSites) {
+                try {
+                    state.sites = JSON.parse(savedSites);
+                    if (state.sites && state.sites.length > 0) {
+                        const target = state.sites.find(s => s.id === activeId) || state.sites[0];
+                        setActiveSite(target.id, false);
+                        return;
+                    }
+                } catch(e) {
+                    console.error("Sites parse error", e);
+                }
+            }
+
+            // Migration from previous v5 single site if available
+            const savedSiteConfig = localStorage.getItem('kabulPanoSiteConfig_v5');
+            const savedData = localStorage.getItem('kabulPanoData_v4');
+            let info = {
+                title: 'Bornova Rezidans & Yaşam Merkezi',
+                code: 'PROJ-2026',
+                location: 'İzmir, Karşıyaka',
+                contractor: 'Apex Yapı A.Ş.',
+                employer: 'Büyükşehir Belediyesi',
+                startDate: '2026-01-01',
+                endDate: '2027-06-30'
+            };
+            let floors = [];
+            let data = savedData ? JSON.parse(savedData) : {};
+
+            if (savedSiteConfig) {
+                try {
+                    const parsed = JSON.parse(savedSiteConfig);
+                    if (parsed.projectInfo) info = parsed.projectInfo;
+                    if (parsed.floorsConfig) floors = parsed.floorsConfig;
+                } catch(e) {}
+            }
+
+            if (!floors || floors.length === 0) {
+                floors = createDefaultFloors();
+            }
+
+            const initialSite = {
+                id: "site_" + Date.now(),
+                name: info.title,
+                info: info,
+                floorsConfig: floors,
+                data: data,
+                createdAt: new Date().toISOString()
+            };
+
+            state.sites = [initialSite];
+            setActiveSite(initialSite.id, true);
+        }
+
+        function saveData() {
+            saveSitesToStorage();
+            const btn = document.querySelector('button[onclick="saveData()"]');
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Kaydedildi</span>';
+            btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span>Kaydet</span>';
+                btn.classList.replace('bg-emerald-600', 'bg-blue-600');
+            }, 2000);
+        }
+
+        function resetData() {
+            showCustomConfirm('DİKKAT: Bu şantiyeye ait TÜM kat ve dairelerdeki açıklamalar, fotoğraflar ve onaylar sıfırlanacaktır.\n\nDevam etmek istediğinize emin misiniz?', () => {
+                state.data = {};
+                state.floorsConfig.forEach(f => {
+                    const count = getFlatCountForArea(f.id);
+                    for (let fl = 1; fl <= count; fl++) {
+                        state.data[`${f.id}_${fl}`] = { isApproved: false, notes: [] };
+                    }
+                });
+                saveSitesToStorage();
+                renderFloors(); 
+                updateGlobalProgress();
+                showCustomAlert("Mevcut şantiye verileri başarıyla sıfırlandı.", "Başarılı");
+            });
+        }
+
+        function openImageViewer(imgSrc, caption) {
+            document.getElementById('modal-viewer-img').src = imgSrc;
+            document.getElementById('modal-viewer-caption').innerText = caption || '';
+            document.getElementById('image-viewer-modal').classList.remove('hidden');
+        }
+
+        function closeImageViewer() {
+            document.getElementById('image-viewer-modal').classList.add('hidden');
+        }
+
+        function handlePhotoSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    // Sahada hızlı işlem ve A4 PDF'e mükemmel uyum için 800px akıllı sınır
+                    const maxDim = 800;
+                    let width = img.naturalWidth || img.width;
+                    let height = img.naturalHeight || img.height;
+
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // 0.68 kalite: kristal netlik ama dosya boyutu ~40 KB (10 kat tasarruf!)
+                    state.tempPhoto = canvas.toDataURL('image/jpeg', 0.68);
+                    document.getElementById('temp-photo-img').src = state.tempPhoto;
+                    document.getElementById('temp-photo-preview').classList.remove('hidden');
+                    const camLabel = document.getElementById('camera-upload-label');
+                    const galLabel = document.getElementById('gallery-upload-label');
+                    if (camLabel) camLabel.classList.add('text-blue-600');
+                    if (galLabel) galLabel.classList.add('text-emerald-600');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function removeTempPhoto() {
+            state.tempPhoto = null;
+            document.getElementById('temp-photo-preview').classList.add('hidden');
+            document.getElementById('photo-upload-label').classList.remove('text-blue-600');
+        }
+
+        function shareViaWhatsApp() {
+            const key = `${state.selectedFloor}_${state.selectedFlat}`;
+            const data = state.data[key];
+            const fConf = getFloorConfig(state.selectedFloor);
+            const floorName = fConf ? fConf.name : state.selectedFloor;
+            const flatName = getFlatDisplayName(state.selectedFloor, state.selectedFlat);
+            
+            if (!data || !data.notes || data.notes.length === 0) {
+                showCustomAlert("Bu mahale ait paylaşılacak herhangi bir not bulunamadı.", "Not Yok");
+                return;
+            }
+
+            let msg = `*${state.projectTitle}*\n📍 *Alan:* ${floorName} - ${flatName}\n📅 *Tarih:* ${document.getElementById('inspection-date').value}\n\n*Açıklamalar / Eksikler:*\n`;
+            
+            data.notes.forEach((n, idx) => {
+                let icon = n.status === 'Yapıldı' ? '✅' : '❌';
+                let statText = n.status === 'Yapıldı' ? ' (Giderildi)' : '';
+                msg += `${icon} ${idx + 1}. ${n.text}${statText}\n`;
+            });
+
+            if (data.isApproved) {
+                msg += `\n✨ *Durum: Kabul Onaylandı*`;
+            }
+
+            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
+        }
+
+        function renderDetails() {
+            const key = `${state.selectedFloor}_${state.selectedFlat}`;
+            const data = state.data[key] || { isApproved: false, notes: [] };
+            
+            document.getElementById('approval-checkbox').checked = !!data.isApproved;
+            document.getElementById('current-notes-count').innerText = `${data.notes ? data.notes.length : 0} Not`;
+            
+            const container = document.getElementById('notes-container');
+            if (!data.notes || data.notes.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-slate-400 text-xs italic bg-white rounded-2xl border border-slate-200">
+                        <i class="fa-regular fa-clipboard text-2xl mb-1.5 text-slate-300 block"></i>
+                        Bu daire için henüz bir açıklama eklenmemiş.
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = '';
+            data.notes.forEach(note => {
+                const isDone = note.status === 'Yapıldı';
+                
+                let dateInfo = `<div class="text-[10px] text-slate-400 mt-1 flex flex-wrap items-center gap-x-3"><span title="Tespit Tarihi"><i class="fa-regular fa-calendar-plus mr-1"></i>${formatDate(note.createdAt)}</span>`;
+                if (isDone && note.resolvedAt) {
+                    dateInfo += `<span class="text-emerald-600 font-medium" title="Çözülme Tarihi"><i class="fa-solid fa-check-double mr-1"></i>Çözüm: ${formatDate(note.resolvedAt)}</span>`;
+                }
+                dateInfo += `</div>`;
+
+                let photoThumb = '';
+                if (note.photo) {
+                    photoThumb = `
+                        <div class="mt-2">
+                            <img src="${note.photo}" onclick="openImageViewer('${note.photo}', '${note.text.replace(/'/g, "\\'")}')" 
+                                class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border border-slate-200 shadow-sm cursor-pointer hover:opacity-90 transition-opacity" 
+                                alt="Eksik Fotoğrafı" title="Büyütmek için tıklayın">
+                        </div>`;
+                }
+
+                container.innerHTML += `
+                    <div class="border rounded-2xl p-3 transition-all ${isDone ? 'note-done' : 'bg-white border-slate-200'} shadow-sm">
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
+                            <div class="flex-1">
+                                <div class="text-xs sm:text-sm font-medium leading-relaxed ${isDone ? 'note-done-text' : 'text-slate-800'}">${note.text}</div>
+                                ${photoThumb}
+                                ${dateInfo}
+                            </div>
+                            
+                            <div class="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 flex-shrink-0">
+                                <button onclick="toggleNoteStatus('${note.id}')" class="px-2.5 py-1 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1 ${isDone ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
+                                    <i class="fa-solid ${isDone ? 'fa-check' : 'fa-clock'}"></i> <span>${isDone ? 'Yapıldı' : 'Açık'}</span>
+                                </button>
+                                
+                                <div class="flex items-center gap-1">
+                                    <button onclick="editNote('${note.id}')" class="p-1.5 text-blue-500 hover:bg-blue-50 rounded-xl transition-colors text-xs" title="Düzenle">
+                                        <i class="fa-solid fa-pencil"></i>
+                                    </button>
+                                    <button onclick="deleteNote('${note.id}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors text-xs" title="Sil">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function updateGlobalProgress() {
+            let total = 0, comp = 0, openCount = 0;
+            for(let key in state.data) {
+                if (state.data[key].notes) {
+                    total += state.data[key].notes.length;
+                    comp += state.data[key].notes.filter(n => n.status === 'Yapıldı').length;
+                    openCount += state.data[key].notes.filter(n => n.status === 'Açık').length;
+                }
+            }
+            const p = total === 0 ? 0 : Math.round((comp/total)*100);
+            document.getElementById('global-progress-bar').style.width = `${p}%`;
+            document.getElementById('global-progress-text').innerText = `%${p}`;
+            document.getElementById('global-stats-text').innerHTML = `<i class="fa-solid fa-check-circle text-emerald-500 mr-1"></i>${comp} / ${total} Açıklama Çözüldü`;
+            document.getElementById('completed-flats-text').innerHTML = `<i class="fa-solid fa-clock mr-1"></i>Toplam ${openCount} Açık Not`;
+        }
+
+        function addNote() {
+            const input = document.getElementById('new-note-input');
+            const text = input.value.trim();
+            if (!text) return;
+            const date = document.getElementById('inspection-date').value;
+            
+            addNoteToState(state.selectedFloor, state.selectedFlat, text, date, state.tempPhoto);
+            
+            input.value = ''; 
+            removeTempPhoto();
+            saveSitesToStorage(); 
+            renderDetails();
+        }
+
+        function deleteNote(id) {
+            showCustomConfirm('Bu notu silmek istediğinize emin misiniz?', () => {
+                const key = `${state.selectedFloor}_${state.selectedFlat}`;
+                state.data[key].notes = state.data[key].notes.filter(n => n.id !== id);
+                saveSitesToStorage();
+                renderDetails();
+            });
+        }
+
+        function editNote(id) {
+            const key = `${state.selectedFloor}_${state.selectedFlat}`;
+            const note = state.data[key].notes.find(n => n.id === id);
+            showCustomPrompt("Notu düzenleyin:", note.text, (newText) => {
+                if (newText && newText.trim() !== '') {
+                    note.text = newText.trim();
+                    saveSitesToStorage();
+                    renderDetails();
+                }
+            });
+        }
+
+        function toggleNoteStatus(id) {
+            const n = state.data[`${state.selectedFloor}_${state.selectedFlat}`].notes.find(n => n.id === id);
+            n.status = n.status === 'Açık' ? 'Yapıldı' : 'Açık';
+            n.resolvedAt = n.status === 'Yapıldı' ? document.getElementById('inspection-date').value : null;
+            saveSitesToStorage();
+            renderDetails();
+        }
+
+        function toggleApproval() { 
+            state.data[`${state.selectedFloor}_${state.selectedFlat}`].isApproved = document.getElementById('approval-checkbox').checked;
+            saveSitesToStorage();
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) return `${parts[2]}.${parts[1]}.${parts[0]}`;
+            return dateStr;
+        }
+
+        function addNoteToState(floor, flat, noteText, date, photo=null) {
+            let key = `${floor}_${flat}`;
+            if (!state.data[key]) state.data[key] = { isApproved: false, notes: [] };
+            
+            let status = 'Açık';
+            let resolvedAt = null;
+            let cleanNote = noteText;
+            
+            if (cleanNote.toLowerCase().includes('(eksiklik giderildi') || cleanNote.toLowerCase().includes('(yapıldı)') || cleanNote.toLowerCase().includes('(çözüldü)')) {
+                status = 'Yapıldı';
+                resolvedAt = date;
+                cleanNote = cleanNote.replace(/\(\s*Eksiklik giderildi\.?\s*\)/i, '')
+                                     .replace(/\(\s*Yapıldı\.?\s*\)/i, '')
+                                     .replace(/\(\s*Çözüldü\.?\s*\)/i, '').trim();
+            }
+            
+            const isDuplicate = state.data[key].notes && state.data[key].notes.some(n => n.text.toLowerCase() === cleanNote.toLowerCase());
+            
+            if (!isDuplicate && cleanNote.length > 2) {
+                state.data[key].notes.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                    text: cleanNote,
+                    createdAt: date,
+                    status: status,
+                    resolvedAt: resolvedAt,
+                    photo: photo
+                });
+                state.data[key].isApproved = false;
+                return true;
+            }
+            return false;
+        }
+
+        // ==========================================
+        // YÖNETİCİ ÖZETİ VE RAPOR MOTORU
+        // ==========================================
+        function getDetailed10LineSummary(total, closed, openCount, completionRate, dateFormatted) {
+            return `${state.projectTitle} projesinde yürütülen geçici kabul denetimleri kapsamında saha verileri düzenli olarak işlenmiştir.
+Yapılan denetimlerde tanımlı katlar, bağımsız bölümler ve ortak kullanım alanlarında toplam ${total} adet eksik ve kusurlu imalat kayıt altına alınmıştır.
+Kayıt altına alınan bu tespitlerden ${closed} adedi (%${completionRate}) yüklenici ve taşeron ekiplerince giderilerek tamamlanmıştır.
+Halihazırda bekleyen ${openCount} adet açık kalemin büyük çoğunluğu daire içi ince yapı rötuşları ve son kat montaj detaylarından oluşmaktadır.
+İnce yapı imalatlarında kapı-doğrama ayarları, süpürgelik birleşimleri, seramik derzleri ve lokal boya tamiratları öncelikli kalemlerdir.
+Mekanik ve elektrik disiplinlerinde armatür montajları, şaft kapakları ile ortak alan acil aydınlatma testleri takvime uygun sürmektedir.
+Açık kalan tüm maddeler ilgili alt yüklenicilere iletilmiş olup sahadaki düzeltme ve tamamlama faaliyetleri heyet gözetiminde devam etmektedir.
+Mevcut şantiye verileri doğrultusunda genel geçici kabul ilerleme oranı %${completionRate} seviyesinde olup yapısal bir kusur bulunmamaktadır.
+Kalan eksiklerin ivedilikle ikmaliyle birlikte ikinci tur mükerrer kontroller gerçekleştirilerek bağımsız bölümler kabule hazır hale getirilecektir.
+Şantiye genel düzeni, mahal temizliği ve eksiksiz teslimat hedefleri doğrultusunda geçici kabul süreci kontrollü ve olumlu şekilde ilerlemektedir.`;
+        }
+
+        let isEditingReport = false;
+        function showExecutiveSummary() {
+            let total = 0, closed = 0, open = [];
+            for(let k in state.data) {
+                if(state.data[k].notes) {
+                    total += state.data[k].notes.length;
+                    closed += state.data[k].notes.filter(n => n.status === 'Yapıldı').length;
+                    open.push(...state.data[k].notes.filter(n => n.status === 'Açık'));
+                }
+            }
+            
+            let completionRate = total === 0 ? 0 : Math.round((closed / total) * 100);
+            let dateFormatted = formatDate(document.getElementById('inspection-date').value);
+            let full10LineReport = getDetailed10LineSummary(total, closed, open.length, completionRate, dateFormatted);
+            
+            document.getElementById('report-content-area').innerHTML = `
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Sayısal Durum & Tamamlanma Özeti</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div class="bg-blue-50 p-4 rounded-2xl text-center border border-blue-100">
+                            <div class="text-xs text-blue-600 font-semibold mb-1">Toplam Tespit</div>
+                            <div class="text-2xl sm:text-3xl font-black text-blue-700">${total}</div>
+                        </div>
+                        <div class="bg-emerald-50 p-4 rounded-2xl text-center border border-emerald-100">
+                            <div class="text-xs text-emerald-600 font-semibold mb-1">Tamamlanan</div>
+                            <div class="text-2xl sm:text-3xl font-black text-emerald-700">${closed}</div>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-2xl text-center border border-red-100">
+                            <div class="text-xs text-red-600 font-semibold mb-1">Bekleyen (Açık)</div>
+                            <div class="text-2xl sm:text-3xl font-black text-red-700">${open.length}</div>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-2xl text-center border border-purple-100">
+                            <div class="text-xs text-purple-600 font-semibold mb-1">Başarı Oranı</div>
+                            <div class="text-2xl sm:text-3xl font-black text-purple-700">%${completionRate}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="mb-2">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Yönetici Notu ve Genel Veri Değerlendirmesi</h3>
+                    </div>
+                    <div id="editable-comment" class="text-justify leading-relaxed p-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none text-slate-800 text-xs sm:text-sm font-normal whitespace-pre-wrap" contenteditable="false">${full10LineReport}</div>
+                </div>
+            `;
+            
+            isEditingReport = false;
+            updateEditButtonUI();
+            document.getElementById('report-modal').classList.remove('hidden');
+        }
+
+        function closeReportModal() { document.getElementById('report-modal').classList.add('hidden'); }
+        
+        function toggleEditReport() {
+            isEditingReport = !isEditingReport;
+            const commentDiv = document.getElementById('editable-comment');
+            if (isEditingReport) {
+                commentDiv.setAttribute('contenteditable', 'true');
+                commentDiv.classList.add('border-blue-400', 'bg-blue-50/40', 'ring-2', 'ring-blue-100');
+                commentDiv.focus();
+            } else {
+                commentDiv.setAttribute('contenteditable', 'false');
+                commentDiv.classList.remove('border-blue-400', 'bg-blue-50/40', 'ring-2', 'ring-blue-100');
+            }
+            updateEditButtonUI();
+        }
+
+        function updateEditButtonUI() {
+            const btn = document.getElementById('edit-report-btn');
+            if (isEditingReport) {
+                btn.innerHTML = '<i class="fa-solid fa-check text-emerald-600 mr-1"></i> Uygula';
+                btn.classList.replace('bg-slate-200', 'bg-emerald-100');
+                btn.classList.replace('text-slate-700', 'text-emerald-800');
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-pencil mr-1"></i> Düzenle';
+                btn.classList.replace('bg-emerald-100', 'bg-slate-200');
+                btn.classList.replace('text-emerald-800', 'text-slate-700');
+            }
+        }
+
+        function saveExecutivePDF() {
+            if (isEditingReport) toggleEditReport();
+            const content = document.getElementById('report-content-area');
+            const dateStr = formatDate(document.getElementById('inspection-date').value);
+            const currentLogo = 'img/logo.png';
+
+            const container = document.createElement('div');
+            container.style.padding = '20px';
+            container.style.fontFamily = 'system-ui, sans-serif';
+            container.style.color = '#0f172a';
+            container.innerHTML = `
+                <div style="border-bottom: 2px solid #6b21a8; padding-bottom: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px;">
+                    <img src="${currentLogo}" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain; border: 1px solid #cbd5e1;" alt="Logo">
+                    <div>
+                        <div style="font-size: 10px; font-weight: bold; color: #7e22ce; text-transform: uppercase;">Yönetici Özeti & Geçici Kabul Raporu</div>
+                        <h1 style="font-size: 17px; font-weight: bold; margin: 2px 0 0 0;">${state.projectTitle}</h1>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Rapor Tarihi: ${dateStr}</div>
+                    </div>
+                </div>
+                ${content.innerHTML}
+            `;
+
+            const safeName = (state.projectTitle || 'Terminal_Takip').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30);
+            const defaultFileName = `${safeName}_Yonetici_Ozeti_${new Date().toISOString().split('T')[0]}.pdf`;
+            
+            showCustomPrompt("Yönetici Özeti PDF Dosya Adını Belirleyin:", defaultFileName, (chosenFileName) => {
+                let finalFileName = (chosenFileName || '').trim();
+                if (!finalFileName) finalFileName = defaultFileName;
+                if (!finalFileName.toLowerCase().endsWith('.pdf')) {
+                    finalFileName += '.pdf';
+                }
+                executeSaveAsPDF(container, finalFileName, 'portrait');
+            }, "PDF Kaydet");
+        }
+
+        function printExecutiveReport() {
+            if (isEditingReport) toggleEditReport();
+            const content = document.getElementById('report-content-area').innerHTML;
+            const dateStr = formatDate(document.getElementById('inspection-date').value);
+            const currentLogo = 'img/logo.png';
+            
+            const printHTML = `
+                <div style="padding: 20px; font-family: system-ui, sans-serif; color: #0f172a;">
+                    <div style="border-bottom: 2px solid #6b21a8; padding-bottom: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px;">
+                        <img src="${currentLogo}" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain; border: 1px solid #cbd5e1;" alt="Logo">
+                        <div>
+                            <h1 style="font-size: 18px; font-weight: bold; margin: 0;">${state.projectTitle} - YÖNETİCİ ÖZETİ</h1>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 3px;">Tarih: ${dateStr}</div>
+                        </div>
+                    </div>
+                    ${content}
+                </div>`;
+            
+            const printContainer = document.getElementById('print-container');
+            printContainer.innerHTML = printHTML;
+            window.print();
+        }
+    </script>
+
+    <script>
+      // Çevrimdışı çalışma + verilerin iOS tarafından silinmemesi için kalıcı depolama isteği
+      if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW:', e)));
+      }
+      if (navigator.storage && navigator.storage.persist) { navigator.storage.persist().catch(() => {}); }
+    </script>
+</body>
+</html>
